@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NLog;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,8 +9,14 @@ namespace MACOs.JY.ActorFramework
 {
     public class ActorFactory
     {
+        private static Logger _log = LogManager.CreateNullLogger();
+
         private static List<Actor> globalActorCollection = new List<Actor>();
 
+        public static void EnableLogging(bool enable)
+        {
+            _log = enable ? LogManager.GetLogger("Factory") : LogManager.CreateNullLogger();
+        }
         public static T Create<T>(bool logEnabled, string alias, params object[] param)
         {
             Type t = typeof(T);

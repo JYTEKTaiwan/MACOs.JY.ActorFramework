@@ -34,6 +34,18 @@ namespace MACOs.JY.ActorFramework
             }
         }
 
+        public void ClearEvent()
+        {
+            if (CommandReceived!=null)
+            {
+                foreach (EventHandler<ActorCommand> item in CommandReceived.GetInvocationList())
+                {
+                    CommandReceived -= item;
+                }
+
+            }
+
+        }
     }
 
     public enum InternalCommnucationModule

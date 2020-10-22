@@ -95,10 +95,9 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         public void StartService()
         {
-            _comm.CommandReceived -= CommandReceived;
+            _comm.ClearEvent();
             _comm.CommandReceived += CommandReceived;
             _comm.Start();
-            this.UniqueID = ActorAliasName + "-" + _comm.ID;
         }
 
         /// <summary>
@@ -108,11 +107,6 @@ namespace MACOs.JY.ActorFramework
         {
             _comm.Stop();
         }
-
-        /// <summary>
-        /// Send and execute the command asynchronously 
-        /// </summary>
-        /// <param name="cmd">command object</param>
         public void ExecuteAsync(ActorCommand cmd)
         {
             try
@@ -127,23 +121,47 @@ namespace MACOs.JY.ActorFramework
         }
 
         /// <summary>
+        /// Send and execute the command asynchronously 
+        /// </summary>
+        /// <param name="cmd">command object</param>
+        public void ExecuteAsync(string methodName, params object[] param)
+        {
+            try
+            {
+                _comm.Send(new ActorCommand(methodName,param));
+            }
+            catch (Exception ex)
+            {
+                _logService?.Error(ex);
+                throw ex;
+            }
+        }
+
+        /// <summary>
         /// Get the first return element that store in the FIFO of actor object, this function will hold the thread until new data is derived or timeout
         /// </summary>
         /// <typeparam name="T">type of the result object</typeparam>
         /// <param name="timeout">timeout in milliseconds</param>
         /// <returns>true if new element is deququed</returns>
-        public T GetFeeedback<T>(int timeout = 1000)
+        public T GetFeeedback<T>(bool keepNullValue=false,int timeout = 1000)
         {
             object ans;
             Stopwatch sw = new Stopwatch();
             try
             {
                 sw.Restart();
-                while (!response.TryDequeue(out ans) && sw.ElapsedMilliseconds <= timeout)
+                do
                 {
-                    Thread.Sleep(0);
-                }
-                if (sw.ElapsedMilliseconds > timeout || ans == null)
+                    if (response.TryDequeue(out ans))
+                    {
+                        if (ans != null || keepNullValue)
+                        {
+                            break;
+                        }
+                    }
+                } while (sw.ElapsedMilliseconds <= timeout);
+
+                if (sw.ElapsedMilliseconds > timeout)
                 {
                     return default(T);
                 }
@@ -179,9 +197,8 @@ namespace MACOs.JY.ActorFramework
             object ans;
             try
             {
-                bool hasData = response.TryDequeue(out ans);
-
-                if (hasData && ans != null)
+                bool dataAvailable = response.TryDequeue(out ans);
+                if (dataAvailable && ans !=null)
                 {
                     if (ans is T)
                     {
@@ -212,6 +229,19 @@ namespace MACOs.JY.ActorFramework
                 throw ex;
             }
         }
+        public T Execute<T>(string methodName, params object[] param)
+        {
+            try
+            {
+                _comm.Send(new ActorCommand(methodName, param));
+                return GetFeeedback<T>();
+            }
+            catch (Exception ex)
+            {
+                _logService?.Error(ex);
+                throw ex;
+            }
+        }
 
         /// <summary>
         /// Send and execute the command asynchronously. This method is for functions that have return value
@@ -233,6 +263,21 @@ namespace MACOs.JY.ActorFramework
             }
         }
 
+        public void Execute(string methodName, params object[] param)
+        {
+            try
+            {
+                _comm.Send(new ActorCommand(methodName,param));
+                //bypass the return value, either is null or not
+                GetFeeedback<object>();
+            }
+            catch (Exception ex)
+            {
+                _logService?.Error(ex);
+                throw ex;
+            }
+        }
+
         /// <summary>
         /// Send and execute the command asynchronously. This method is for functions that void return value
         /// </summary>
@@ -243,7 +288,7 @@ namespace MACOs.JY.ActorFramework
             {
                 _comm.Send(cmd);
                 //bypass the return value, either is null or not
-                GetFeeedback<object>();
+                GetFeeedback<object>(false);
             }
             catch (Exception ex)
             {
