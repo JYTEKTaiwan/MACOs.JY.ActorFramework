@@ -18,7 +18,7 @@ namespace MACOs.JY.ActorFramework.CommModules
                 {
                     this.OnCommandReceived(this, cmd);
                 }
-                Thread.Sleep(0);
+                Thread.Sleep(1);
             }
         }
 

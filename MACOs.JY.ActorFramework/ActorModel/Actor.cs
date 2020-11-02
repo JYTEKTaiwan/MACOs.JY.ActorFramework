@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NLog;
 using NLog.Config;
 using NLog.LayoutRenderers;
@@ -16,17 +17,18 @@ namespace MACOs.JY.ActorFramework
 {
     public abstract class Actor
     {
-        #region Perivate Fields
+        #region Private Fields
         private ConcurrentQueue<object> response = new ConcurrentQueue<object>();
         private List<MethodInfo> methods = new List<MethodInfo>();
         private Logger _logService;
         private bool logEnabled = false;
         private InternalCommnucationModule _internalComm;
         private InnerCommunicator _comm;
+        private DelConverter _converter;
         #endregion
 
         #region Public Properties
-
+        public int TimeoutDefaultValue { get; set; } = 5000;
         public string ActorClassName { get; }
 
         public string UniqueID { get; private set; }
@@ -37,13 +39,25 @@ namespace MACOs.JY.ActorFramework
             get { return _internalComm; }
             set
             {
-                _internalComm = value;
-                if (_comm!=null)
+
+                if (_comm != null)
                 {
-                    _comm.CommandReceived -= CommandReceived;
-                    _comm.Stop();
+                    StopService();
+                }
+                switch (value)
+                {
+                    case InternalCommnucationModule.NetMQ:
+                        _converter = ConvertNetMQ;
+                        break;
+                    case InternalCommnucationModule.ConcurrentQueue:
+                        break;
+                    default:
+                        break;
                 }
                 _comm = InnerCommunicator.CreateInstance(value);
+                StartService();
+                _internalComm = value;
+
             }
         }
         public bool LogEnabled
@@ -106,6 +120,8 @@ namespace MACOs.JY.ActorFramework
         public void StopService()
         {
             _comm.Stop();
+            _comm.ClearEvent();
+
         }
         public void ExecuteAsync(ActorCommand cmd)
         {
@@ -128,7 +144,7 @@ namespace MACOs.JY.ActorFramework
         {
             try
             {
-                _comm.Send(new ActorCommand(methodName,param));
+                _comm.Send(new ActorCommand(methodName, param));
             }
             catch (Exception ex)
             {
@@ -143,7 +159,7 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of the result object</typeparam>
         /// <param name="timeout">timeout in milliseconds</param>
         /// <returns>true if new element is deququed</returns>
-        public T GetFeeedback<T>(bool keepNullValue=false,int timeout = 1000)
+        public T GetFeeedback<T>(bool keepNullValue = false, int timeout = 1000)
         {
             object ans;
             Stopwatch sw = new Stopwatch();
@@ -198,7 +214,7 @@ namespace MACOs.JY.ActorFramework
             try
             {
                 bool dataAvailable = response.TryDequeue(out ans);
-                if (dataAvailable && ans !=null)
+                if (dataAvailable && ans != null)
                 {
                     if (ans is T)
                     {
@@ -234,7 +250,7 @@ namespace MACOs.JY.ActorFramework
             try
             {
                 _comm.Send(new ActorCommand(methodName, param));
-                return GetFeeedback<T>();
+                return GetFeeedback<T>(false, TimeoutDefaultValue);
             }
             catch (Exception ex)
             {
@@ -249,12 +265,12 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of return value</typeparam>
         /// <param name="cmd">command object</param>
         /// <returns></returns>
-        public T Execute<T>(ActorCommand cmd)
+        public T Execute<T>(ActorCommand cmd, int timeout = 1000)
         {
             try
             {
                 _comm.Send(cmd);
-                return GetFeeedback<T>();
+                return GetFeeedback<T>(false, timeout);
             }
             catch (Exception ex)
             {
@@ -267,9 +283,9 @@ namespace MACOs.JY.ActorFramework
         {
             try
             {
-                _comm.Send(new ActorCommand(methodName,param));
+                _comm.Send(new ActorCommand(methodName, param));
                 //bypass the return value, either is null or not
-                GetFeeedback<object>();
+                GetFeeedback<object>(false, TimeoutDefaultValue);
             }
             catch (Exception ex)
             {
@@ -282,13 +298,13 @@ namespace MACOs.JY.ActorFramework
         /// Send and execute the command asynchronously. This method is for functions that void return value
         /// </summary>
         /// <param name="cmd">command object</param>
-        public void Execute(ActorCommand cmd)
+        public void Execute(ActorCommand cmd, int timeout = 1000)
         {
             try
             {
                 _comm.Send(cmd);
                 //bypass the return value, either is null or not
-                GetFeeedback<object>(false);
+                GetFeeedback<object>(false, timeout);
             }
             catch (Exception ex)
             {
@@ -300,31 +316,66 @@ namespace MACOs.JY.ActorFramework
         #endregion Public Methods
 
         #region Private Methods
-        private static object Convert(Type t, string value)
+        private delegate object DelConverter(Type t, string value);
+
+
+        private object ConvertNetMQ(Type t, string value)
         {
             if (t.GetTypeInfo().IsEnum)
                 return Enum.Parse(t, value);
+            if (t.GetTypeInfo().IsArray)
+            {
+                Type element = t.GetElementType();
 
-            return System.Convert.ChangeType(value, t);
+                switch (element.Name)
+                {
+                    case "Short":
+                        return JArray.Parse(value).Values<short>().ToArray();
+                    case "Byte":
+                        return JArray.Parse(value).Values<byte>().ToArray();
+                    case "UShort":
+                        return JArray.Parse(value).Values<ushort>().ToArray();
+                    case "Int":
+                        return JArray.Parse(value).Values<int>().ToArray();
+                    case "Uint":
+                        return JArray.Parse(value).Values<uint>().ToArray();
+                    case "Float":
+                        return JArray.Parse(value).Values<float>().ToArray();
+                    case "Long":
+                        return JArray.Parse(value).Values<long>().ToArray();
+                    case "Double":
+                        return JArray.Parse(value).Values<double>().ToArray();
+                    default:
+                        return new object();
+                }
+
+            }
+            else
+            {
+                return System.Convert.ChangeType(value, t);
+            }
+
         }
-
         #endregion
 
         #region Events
         private void CommandReceived(object sender, ActorCommand e)
         {
-            _logService?.Info("Received command " + e.Name);
-            _logService?.Debug(e.ToString());
+            _logService?.Info("Execute command: " + e.Name);
+            _logService?.Debug("Execution starts: " + e.ToString());
             var res = new object();
             try
             {
                 var mi = methods.First(x => (x.GetCustomAttribute(typeof(ActorCommandAttribute)) as ActorCommandAttribute).Name == e.Name);
-                var types = mi.GetParameters().Select(x => x.ParameterType).ToArray();
-                for (int i = 0; i < types.Count(); i++)
-                {
-                    Type t = types.ElementAt(i);
 
-                    e.Parameters[i] = Convert(types[i], e.Parameters[i].ToString());
+                if (_internalComm == InternalCommnucationModule.NetMQ)
+                {
+                    var types = mi.GetParameters().Select(x => x.ParameterType).ToArray();
+                    for (int i = 0; i < types.Count(); i++)
+                    {
+                        Type t = types.ElementAt(i);
+                        e.Parameters[i] = _converter.Invoke(types[i], e.Parameters[i].ToString());
+                    }
                 }
                 res = mi.Invoke(this, e.Parameters);
                 response.Enqueue(res);
@@ -341,8 +392,8 @@ namespace MACOs.JY.ActorFramework
                 }
                 throw ex;
             }
-            _logService?.Info("Execution done: "+ res?.ToString());
-            _logService?.Debug("Execution done: "+res?.ToString());
+            _logService?.Debug("Execution complete: " + res.ToString());
+            _logService?.Info("Completed: " + e.Name);
         }
 
         #endregion
@@ -395,7 +446,7 @@ namespace MACOs.JY.ActorFramework
             for (int i = 0; i < Parameters.Length; i++)
             {
                 var end = i == Parameters.Length - 1 ? "" : ",";
-                str += Parameters[i].ToString() + end;
+                str += (Parameters[i].GetType().IsArray ? Parameters[i].GetType().FullName : Parameters[i].ToString()) + end;
             }
             return str;
         }

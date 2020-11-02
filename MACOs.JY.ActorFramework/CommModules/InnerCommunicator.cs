@@ -42,7 +42,6 @@ namespace MACOs.JY.ActorFramework
                 {
                     CommandReceived -= item;
                 }
-
             }
 
         }

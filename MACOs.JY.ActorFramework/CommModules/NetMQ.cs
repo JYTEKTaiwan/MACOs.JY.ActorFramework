@@ -1,5 +1,6 @@
 ﻿using NetMQ;
 using NetMQ.Sockets;
+using Newtonsoft.Json.Linq;
 using System;
 
 namespace MACOs.JY.ActorFramework.CommModules
@@ -36,7 +37,7 @@ namespace MACOs.JY.ActorFramework.CommModules
                     poller.Stop();
                     return;
                 }
-                var cmd = ActorCommand.FromJson(command);
+                var cmd = ActorCommand.FromJson(command);               
                 ShimCommandReceived?.Invoke(this, cmd);
             }
         }

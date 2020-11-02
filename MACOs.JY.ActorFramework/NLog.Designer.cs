@@ -7,7 +7,7 @@
 //     變更將會遺失。
 // </auto-generated>
 //------------------------------------------------------------------------------
-using System.Configuration;
+
 namespace MACOs.JY.ActorFramework {
     
     
@@ -22,6 +22,5 @@ namespace MACOs.JY.ActorFramework {
                 return defaultInstance;
             }
         }
-
     }
 }

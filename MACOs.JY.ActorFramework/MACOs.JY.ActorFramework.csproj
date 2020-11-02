@@ -5,6 +5,14 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <ApplicationIcon>JYTek.ico</ApplicationIcon>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Company>JYTEK</Company>
+    <Product>Actor Framework</Product>
+    <Authors>JYTEK Taiwan</Authors>
+    <PackageProjectUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework.git</RepositoryUrl>
+    <Version>1.2.0</Version>
+    <PackageIcon></PackageIcon>
+    <PackageTags>.Net Standard;.Net Framework; Actor Model</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NetMQ" Version="4.0.1.6" />

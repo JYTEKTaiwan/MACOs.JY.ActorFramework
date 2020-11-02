@@ -13,26 +13,52 @@ namespace MACOs.JY.ActorFramework
 
         private static List<Actor> globalActorCollection = new List<Actor>();
 
-        public static void EnableLogging(bool enable)
+        public static void EnableLogging()
+
         {
-            _log = enable ? LogManager.GetLogger("Factory") : LogManager.CreateNullLogger();
+            _log = LogManager.GetLogger("Factory");
+        }
+        public static void DisableLogging()
+        {
+            _log = LogManager.CreateNullLogger();
         }
         public static T Create<T>(bool logEnabled, string alias, params object[] param)
         {
-            Type t = typeof(T);
-            if (t.BaseType == typeof(Actor))
+            _log.Info("Create New Actor");
+            try
             {
-                var g = t.GetConstructors();
-                var actor = t.GetConstructors()[0].Invoke(param) as Actor;
-                actor.ActorAliasName = alias;
-                actor.StartService();
-                actor.LogEnabled = logEnabled;
-                globalActorCollection.Add(actor);
-                return (T)Convert.ChangeType(actor, typeof(T));
+                Type t = typeof(T);
+
+                if (t.BaseType == typeof(Actor))
+                {
+                    var g = t.GetConstructor(param.Select(x => x.GetType()).ToArray());
+                    if (g != null)
+                    {
+                        var actor = g.Invoke(param) as Actor;
+                        actor.ActorAliasName = alias;
+                        actor.StartService();
+                        actor.LogEnabled = logEnabled;
+                        _log.Debug(string.Format("{0} is created", actor.UniqueID));
+                        globalActorCollection.Add(actor);
+                        return (T)Convert.ChangeType(actor, typeof(T));
+                    }
+                    else
+                    {
+                        return default(T);
+                    }
+
+                }
+                else
+                {
+                    return default(T);
+                }
+
             }
-            else
+            catch (Exception ex)
             {
+                _log.Error(ex);
                 return default(T);
+
             }
         }
 
@@ -44,6 +70,11 @@ namespace MACOs.JY.ActorFramework
             }
         }
 
+        public static void Kill(Actor actor)
+        {
+            actor.StopService();
+            globalActorCollection.Remove(actor);
+        }
         public static void Export(params Assembly[] assems)
         {
             XmlAttribute attribute;
