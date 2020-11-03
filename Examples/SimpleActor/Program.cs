@@ -11,58 +11,21 @@ namespace SimpleActor
         {
 
 
-            ActorFactory.Export();
-            var test = new TestActor();
-            test.StartService();
-            //var test = new TestActor();
-            test.Execute<DateTime>("Now");
-            //DateTime dt = test.WhatTimeIsIt();
-            //DateTime dt2 = test2.WhatTimeIsIt();
-            //Console.WriteLine(dt);
-            //Console.WriteLine(dt2);
+            ActorFactory.EnableLogging();
 
-            //ActorFactory.EnableLogging();
-
-            //var dev=ActorFactory.Create<Machine>(false, "daq_device");
-            //var ans=dev.Execute<int>("Length",new double[] { 1, 2, 3, 4, 5 });
-            //Console.WriteLine(ans);
-            ////dev.ExecuteAsync("Initial", 5);
-            ////dev.ExecuteAsync("ConfigureTiming", 10000,100);
-            ////dev.ExecuteAsync("Start");
-            ////var data=dev.Execute<double[]>("ReadData");
-            ////foreach (var item in data)
-            ////{
-            ////    Console.WriteLine(item);
-            ////}
-            //dev.Execute("Stop");
+            var dev = ActorFactory.Create<Machine>(false, "daq_device");
+            dev.ExecuteAsync("Length", new double[] { 1, 2, 3, 4, 5 });
+            dev.Execute("Initial", 5);
+            dev.ExecuteAsync("ConfigureTiming", 10000, 100);
+            dev.ExecuteAsync("Start");
+            var data = dev.Execute<double[]>("ReadData");
+            dev.Execute("Stop");
             Console.ReadKey();
             ActorFactory.StopAllActors();
         }
     }
 
 
-
-    public class TestActor:Actor
-    {
-        [ActorCommand("Now")]
-        public DateTime WhatTimeIsIt()
-        {
-            Thread.Sleep(1000);
-            Console.WriteLine(DateTime.Now);
-            return DateTime.Now;
-        }
-
-        public DateTime myMethod()
-        {
-            return DateTime.Now;
-        }
-
-        [ActorCommand("Welcome")]
-        public string Hello()
-        {
-            return "Hello";
-        }
-    }
 
 
     public class Machine : Actor

@@ -24,7 +24,6 @@ namespace MACOs.JY.ActorFramework
         private bool logEnabled = false;
         private InternalCommnucationModule _internalComm;
         private InnerCommunicator _comm;
-        private DelConverter _converter;
         #endregion
 
         #region Public Properties
@@ -47,7 +46,6 @@ namespace MACOs.JY.ActorFramework
                 switch (value)
                 {
                     case InternalCommnucationModule.NetMQ:
-                        _converter = ConvertNetMQ;
                         break;
                     case InternalCommnucationModule.ConcurrentQueue:
                         break;
@@ -179,6 +177,10 @@ namespace MACOs.JY.ActorFramework
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
+                    throw new TimeoutException();
+                }
+                if (ans==null)
+                {
                     return default(T);
                 }
                 if (ans is T)
@@ -285,7 +287,7 @@ namespace MACOs.JY.ActorFramework
             {
                 _comm.Send(new ActorCommand(methodName, param));
                 //bypass the return value, either is null or not
-                GetFeeedback<object>(false, TimeoutDefaultValue);
+                GetFeeedback<object>(true, TimeoutDefaultValue);
             }
             catch (Exception ex)
             {
@@ -304,7 +306,7 @@ namespace MACOs.JY.ActorFramework
             {
                 _comm.Send(cmd);
                 //bypass the return value, either is null or not
-                GetFeeedback<object>(false, timeout);
+                GetFeeedback<object>(true, timeout);
             }
             catch (Exception ex)
             {
@@ -316,46 +318,8 @@ namespace MACOs.JY.ActorFramework
         #endregion Public Methods
 
         #region Private Methods
-        private delegate object DelConverter(Type t, string value);
 
 
-        private object ConvertNetMQ(Type t, string value)
-        {
-            if (t.GetTypeInfo().IsEnum)
-                return Enum.Parse(t, value);
-            if (t.GetTypeInfo().IsArray)
-            {
-                Type element = t.GetElementType();
-
-                switch (element.Name)
-                {
-                    case "Short":
-                        return JArray.Parse(value).Values<short>().ToArray();
-                    case "Byte":
-                        return JArray.Parse(value).Values<byte>().ToArray();
-                    case "UShort":
-                        return JArray.Parse(value).Values<ushort>().ToArray();
-                    case "Int":
-                        return JArray.Parse(value).Values<int>().ToArray();
-                    case "Uint":
-                        return JArray.Parse(value).Values<uint>().ToArray();
-                    case "Float":
-                        return JArray.Parse(value).Values<float>().ToArray();
-                    case "Long":
-                        return JArray.Parse(value).Values<long>().ToArray();
-                    case "Double":
-                        return JArray.Parse(value).Values<double>().ToArray();
-                    default:
-                        return new object();
-                }
-
-            }
-            else
-            {
-                return System.Convert.ChangeType(value, t);
-            }
-
-        }
         #endregion
 
         #region Events
@@ -368,15 +332,6 @@ namespace MACOs.JY.ActorFramework
             {
                 var mi = methods.First(x => (x.GetCustomAttribute(typeof(ActorCommandAttribute)) as ActorCommandAttribute).Name == e.Name);
 
-                if (_internalComm == InternalCommnucationModule.NetMQ)
-                {
-                    var types = mi.GetParameters().Select(x => x.ParameterType).ToArray();
-                    for (int i = 0; i < types.Count(); i++)
-                    {
-                        Type t = types.ElementAt(i);
-                        e.Parameters[i] = _converter.Invoke(types[i], e.Parameters[i].ToString());
-                    }
-                }
                 res = mi.Invoke(this, e.Parameters);
                 response.Enqueue(res);
             }
@@ -423,21 +378,53 @@ namespace MACOs.JY.ActorFramework
     {
         public string Name { get; set; }
         public object[] Parameters { get; set; }
-
         public ActorCommand(string name, params object[] param)
         {
             Name = name;
             Parameters = param;
         }
-
-        public static string ToJson(ActorCommand cmd)
+        public static string ToJson(ActorCommand cmd, JsonConverter[] converters = null)
         {
-            return JsonConvert.SerializeObject(cmd);
+            JObject jo = new JObject();
+            List<JsonConverter> conv = new List<JsonConverter>();
+            if (converters != null)
+            {
+                conv.AddRange(converters);
+            }
+            conv.Add(new ArrayConverter());
+            jo.Add(new JProperty("Types", new JArray(cmd.Parameters.Select(x => x.GetType().FullName).ToArray())));
+            jo.Add(new JProperty("Name", cmd.Name));
+            List<string> param = new List<string>();
+            foreach (var item in cmd.Parameters)
+            {
+                param.Add(JsonConvert.SerializeObject(item, Formatting.Indented, conv.ToArray()));
+            }
+            jo.Add(new JProperty("Parameters", new JArray(param)));
+
+            return jo.ToString();
         }
-
-        public static ActorCommand FromJson(string jsonString)
+        public static ActorCommand FromJson(string jsonString, JsonConverter[] converters = null)
         {
-            return JsonConvert.DeserializeObject<ActorCommand>(jsonString);
+
+            ActorCommand cmd;
+            List<JsonConverter> conv = new List<JsonConverter>();
+            if (converters != null)
+            {
+                conv.AddRange(converters);
+            }
+            conv.Add(new ArrayConverter());
+
+            JObject jo = JObject.Parse(jsonString);
+            string name = jo["Name"].Value<string>();
+            Type[] types = jo["Types"].Values<string>().Select(x => Type.GetType(x)).ToArray();
+            List<object> param = new List<object>();
+            var items = jo["Parameters"].Children().ToArray();
+            for (int i = 0; i < items.Count(); i++)
+            {
+                param.Add(JsonConvert.DeserializeObject(items[i].ToString(), types[i], conv.ToArray()));
+            }
+            cmd = new ActorCommand(name, param.ToArray());
+            return cmd;
         }
 
         public override string ToString()
@@ -446,9 +433,32 @@ namespace MACOs.JY.ActorFramework
             for (int i = 0; i < Parameters.Length; i++)
             {
                 var end = i == Parameters.Length - 1 ? "" : ",";
-                str += (Parameters[i].GetType().IsArray ? Parameters[i].GetType().FullName : Parameters[i].ToString()) + end;
+                str += Parameters[i].ToString() + end;
             }
             return str;
+        }
+    }
+    public class ArrayConverter : JsonConverter
+    {
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            JArray.FromObject(value).WriteTo(writer);
+        }
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            Type element = objectType.GetElementType();
+            var rawValues = JArray.Load(reader).Values<object>().ToArray();
+            Array arr = Array.CreateInstance(element, rawValues.Count());
+            for (int i = 0; i < rawValues.Count(); i++)
+            {
+                arr.SetValue(Convert.ChangeType(rawValues[i], element), i);
+            }
+            return arr;
+        }
+        public override bool CanConvert(Type objectType)
+        {
+            return objectType.IsArray;
         }
     }
 
