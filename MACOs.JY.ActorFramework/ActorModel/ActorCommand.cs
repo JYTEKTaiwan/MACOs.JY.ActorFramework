@@ -2,7 +2,9 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 
 namespace MACOs.JY.ActorFramework
 {
@@ -93,7 +95,24 @@ namespace MACOs.JY.ActorFramework
             return objectType.IsArray;
         }
     }
+    public class ActorCommandCollection
+    {
+        public Dictionary<string, MethodInfo> SupportedMethods { get; } = new Dictionary<string, MethodInfo>();
+        public bool Exists(string key)
+        {
+            return SupportedMethods.Any(x => x.Key == key);
+        }
+        public void Add(MethodInfo item)
+        {
+            SupportedMethods.Add(((ActorCommandAttribute)item.GetCustomAttribute(typeof(ActorCommandAttribute))).Name, item);
+        }
 
+        public MethodInfo GetMethod(string key)
+        {
+            return SupportedMethods[key];
+        }
+
+    }
     public class ActorCommandAttribute : Attribute
     {
         public string Name { get; set; }

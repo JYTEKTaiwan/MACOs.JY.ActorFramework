@@ -13,7 +13,7 @@ namespace MACOs.JY.ActorFramework
     {
         #region Private Fields
         private ConcurrentQueue<object> response = new ConcurrentQueue<object>();
-        private List<MethodInfo> methods = new List<MethodInfo>();
+        private ActorCommandCollection methods = new ActorCommandCollection();
         private Logger _logService = LogManager.CreateNullLogger();
         private bool logEnabled = false;
         private InternalCommnucationModule _internalComm;
@@ -389,7 +389,7 @@ namespace MACOs.JY.ActorFramework
             _logService.Debug("Execution starts: " + e.ToString());
             try
             {
-                var res = methods.First(x => x.Name == e.Name).Invoke(this, e.Parameters);
+                var res = methods.GetMethod(e.Name).Invoke(this, e.Parameters);
                 response.Enqueue(res);
                 OnMsgExecutionDone(e, res);
                 _logService.Debug("Execution complete: " + res?.ToString());
@@ -414,12 +414,13 @@ namespace MACOs.JY.ActorFramework
         {
             MessageExecutionDone?.Invoke(this, new MessageExecutionDoneArgs(cmd, result));
         }
-
         private void CheckCommandCompatilibity(ActorCommand cmd)
         {
+            Type t = typeof(ActorCommandAttribute);
 
-            //check the method name
-            if (!methods.Exists(x=>x.Name== cmd.Name))
+                
+                //check the method name
+            if (!methods.Exists(cmd.Name))
             {
                 string msg = string.Format("Method \"{0}\" is not found", cmd.Name);
                 _logService.Error(msg);
@@ -427,7 +428,7 @@ namespace MACOs.JY.ActorFramework
             }
 
             //check the parameters count
-            var param = methods.First(x=>x.Name==cmd.Name).GetParameters();
+            var param = methods.GetMethod(cmd.Name).GetParameters();
             if (cmd.Parameters.Length != param.Length)
             {
                 string msg = string.Format("[{0}]Number of parameters is not correct. Expected={1}, Actual={2}", cmd.Name, param.Length, cmd.Parameters.Length);
@@ -465,9 +466,9 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         /// <param name="t">Type of Actor</param>
         /// <returns></returns>
-        public static List<MethodInfo> GetCommandList(Type t)
+        public static ActorCommandCollection GetCommandList(Type t)
         {
-            List<MethodInfo> methods = new List<MethodInfo>();
+            ActorCommandCollection  methods = new ActorCommandCollection();
 
             var dict = new Dictionary<string, ParameterInfo[]>();
             var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
