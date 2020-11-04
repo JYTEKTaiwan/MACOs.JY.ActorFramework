@@ -12,7 +12,6 @@ namespace SimpleActor
 
 
             ActorFactory.EnableLogging();
-
             var dev = ActorFactory.Create<Machine>(false, "daq_device");
             dev.ExecuteAsync("Length", new double[] { 1, 2, 3, 4, 5 });
             dev.Execute("Initial", 5);

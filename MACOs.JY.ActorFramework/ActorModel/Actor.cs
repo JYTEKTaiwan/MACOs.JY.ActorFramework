@@ -4,11 +4,14 @@ using NLog;
 using NLog.Config;
 using NLog.LayoutRenderers;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
+using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -20,7 +23,7 @@ namespace MACOs.JY.ActorFramework
         #region Private Fields
         private ConcurrentQueue<object> response = new ConcurrentQueue<object>();
         private List<MethodInfo> methods = new List<MethodInfo>();
-        private Logger _logService;
+        private Logger _logService = LogManager.CreateNullLogger();
         private bool logEnabled = false;
         private InternalCommnucationModule _internalComm;
         private InnerCommunicator _comm;
@@ -63,7 +66,7 @@ namespace MACOs.JY.ActorFramework
             get { return logEnabled; }
             set
             {
-                _logService = value ? LogManager.GetLogger(UniqueID) : null;
+                _logService = value ? LogManager.GetLogger(UniqueID) : LogManager.CreateNullLogger();
                 logEnabled = value;
             }
         }
@@ -127,10 +130,15 @@ namespace MACOs.JY.ActorFramework
             {
                 _comm.Send(cmd);
             }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
             catch (Exception ex)
             {
-                _logService?.Error(ex);
-                throw ex;
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
         }
 
@@ -144,10 +152,15 @@ namespace MACOs.JY.ActorFramework
             {
                 _comm.Send(new ActorCommand(methodName, param));
             }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
             catch (Exception ex)
             {
-                _logService?.Error(ex);
-                throw ex;
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
         }
 
@@ -157,7 +170,7 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of the result object</typeparam>
         /// <param name="timeout">timeout in milliseconds</param>
         /// <returns>true if new element is deququed</returns>
-        public T GetFeeedback<T>(bool keepNullValue = false, int timeout = 1000)
+        public T GetFeeedback<T>(bool keepNullValue = false, int timeout = 5000)
         {
             object ans;
             Stopwatch sw = new Stopwatch();
@@ -177,30 +190,30 @@ namespace MACOs.JY.ActorFramework
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
-                    throw new TimeoutException();
+                    throw new ActorException(string.Format("Timeout, value={0}",timeout));
                 }
-                if (ans==null)
-                {
+                if (ans == null)
+                {                    
                     return default(T);
-                }
-                if (ans is T)
-                {
-                    return (T)ans;
-                }
-                try
-                {
-                    return (T)System.Convert.ChangeType(ans, typeof(T));
-                }
-                catch (InvalidCastException)
-                {
-                    _logService?.Warn("Invalid casting");
-                    return default(T);
-                }
+                }                
+                return (T)System.Convert.ChangeType(ans, typeof(T));
+            }
+            catch (ActorException ex)
+            {
+                _logService.Error(ex.Message);
+                throw ex;
+            }
+            catch (InvalidCastException ex)
+            {
+                string msg = string.Format("Invalid Casting");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
             catch (Exception ex)
             {
-                _logService?.Error(ex);
-                throw ex;
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
         }
 
@@ -222,16 +235,7 @@ namespace MACOs.JY.ActorFramework
                     {
                         result = (T)ans;
                     }
-                    try
-                    {
-                        result = (T)System.Convert.ChangeType(ans, typeof(T));
-                    }
-                    catch (InvalidCastException)
-                    {
-                        _logService?.Warn("Invalid casting");
-
-                        result = default(T);
-                    }
+                    result = (T)System.Convert.ChangeType(ans, typeof(T));
                     return true;
                 }
                 else
@@ -240,11 +244,18 @@ namespace MACOs.JY.ActorFramework
                     return false;
                 }
             }
+            catch (InvalidCastException ex)
+            {
+                string msg = string.Format("Invalid Casting");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+
             catch (Exception ex)
             {
-                _logService?.Error(ex);
-
-                throw ex;
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
         }
         public T Execute<T>(string methodName, params object[] param)
@@ -254,11 +265,17 @@ namespace MACOs.JY.ActorFramework
                 _comm.Send(new ActorCommand(methodName, param));
                 return GetFeeedback<T>(false, TimeoutDefaultValue);
             }
-            catch (Exception ex)
+            catch (ActorException ex)
             {
-                _logService?.Error(ex);
                 throw ex;
             }
+            catch (Exception ex)
+            {
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+
         }
 
         /// <summary>
@@ -274,10 +291,15 @@ namespace MACOs.JY.ActorFramework
                 _comm.Send(cmd);
                 return GetFeeedback<T>(false, timeout);
             }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
             catch (Exception ex)
             {
-                _logService?.Error(ex);
-                throw ex;
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
         }
 
@@ -289,10 +311,15 @@ namespace MACOs.JY.ActorFramework
                 //bypass the return value, either is null or not
                 GetFeeedback<object>(true, TimeoutDefaultValue);
             }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
             catch (Exception ex)
             {
-                _logService?.Error(ex);
-                throw ex;
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
         }
 
@@ -308,10 +335,15 @@ namespace MACOs.JY.ActorFramework
                 //bypass the return value, either is null or not
                 GetFeeedback<object>(true, timeout);
             }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
             catch (Exception ex)
             {
-                _logService?.Error(ex);
-                throw ex;
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
         }
 
@@ -325,30 +357,45 @@ namespace MACOs.JY.ActorFramework
         #region Events
         private void CommandReceived(object sender, ActorCommand e)
         {
-            _logService?.Info("Execute command: " + e.Name);
-            _logService?.Debug("Execution starts: " + e.ToString());
-            var res = new object();
+            _logService.Info("Execute command: " + e.Name);
+            _logService.Debug("Execution starts: " + e.ToString());
             try
             {
-                var mi = methods.First(x => (x.GetCustomAttribute(typeof(ActorCommandAttribute)) as ActorCommandAttribute).Name == e.Name);
 
-                res = mi.Invoke(this, e.Parameters);
+                var mi = methods.First(x => (x.GetCustomAttribute(typeof(ActorCommandAttribute)) as ActorCommandAttribute).Name == e.Name);
+                var res = mi.Invoke(this, e.Parameters);
                 response.Enqueue(res);
+                _logService.Debug("Execution complete: " + res.ToString());
+                _logService.Info("Completed: " + e.Name);
+
             }
+            catch (InvalidOperationException ex)
+            {
+                string msg = string.Format("Method \"{0}\" is not found", e.Name);
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+
+            }
+            catch (TargetParameterCountException ex)
+            {
+                string msg = string.Format("Number of parameters ({0}) is not correct", e.Parameters.Length);
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+            catch (ArgumentException ex)
+            {
+                string msg = string.Format("Type of parameters is not correct");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+
+            }
+
             catch (Exception ex)
             {
-                if (ex is ArgumentException || ex is TargetParameterCountException)
-                {
-                    _logService?.Error("Parameter Error");
-                }
-                else
-                {
-                    _logService?.Error(ex);
-                }
-                throw ex;
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
             }
-            _logService?.Debug("Execution complete: " + res.ToString());
-            _logService?.Info("Completed: " + e.Name);
         }
 
         #endregion
@@ -496,5 +543,26 @@ namespace MACOs.JY.ActorFramework
         {
             builder.Append(GetBuildConfig());
         }
+    }
+
+
+    public class ActorException : Exception
+    {
+        public ActorException()
+        {
+        }
+
+        public ActorException(string message) : base(message)
+        {
+        }
+
+        public ActorException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        protected ActorException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
+
     }
 }
