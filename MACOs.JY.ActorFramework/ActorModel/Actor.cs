@@ -1,20 +1,11 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using NLog;
-using NLog.Config;
+﻿using NLog;
 using NLog.LayoutRenderers;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization;
-using System.Security;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
 
 namespace MACOs.JY.ActorFramework
 {
@@ -30,12 +21,29 @@ namespace MACOs.JY.ActorFramework
         #endregion
 
         #region Public Properties
+        /// <summary>
+        /// Default Timeout value for reading response (default=5000)
+        /// </summary>
         public int TimeoutDefaultValue { get; set; } = 5000;
+
+        /// <summary>
+        /// Class name of the actor
+        /// </summary>
         public string ActorClassName { get; }
 
+        /// <summary>
+        /// Unique ID for each of different actors
+        /// </summary>
         public string UniqueID { get; private set; }
 
+        /// <summary>
+        /// User-defined alias name
+        /// </summary>
         public string ActorAliasName { get; set; }
+
+        /// <summary>
+        /// Internal comuunication ways to choose, default is NetMQ
+        /// </summary>
         public InternalCommnucationModule InternalCommType
         {
             get { return _internalComm; }
@@ -81,18 +89,9 @@ namespace MACOs.JY.ActorFramework
         public Actor()
         {
             LayoutRenderer.Register<BuildConfigLayoutRender>("buildConfiguration");
-            var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-            foreach (var mi in this.GetType().GetMethods(flags))
-            {
-                var att = mi.GetCustomAttribute(typeof(ActorCommandAttribute));
-                if (att != null)
-                {
-                    methods.Add(mi);
-                }
-            }
+            methods = Actor.GetCommandList(this.GetType());
             this.ActorClassName = this.GetType().Name;
             ActorAliasName = ActorClassName;
-            UniqueID = this.GetHashCode().ToString();
             InternalCommType = InternalCommnucationModule.NetMQ;
         }
 
@@ -110,6 +109,7 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         public void StartService()
         {
+            UniqueID = ActorAliasName + "-" + this.GetHashCode().ToString();
             _comm.ClearEvent();
             _comm.CommandReceived += CommandReceived;
             _comm.Start();
@@ -124,10 +124,16 @@ namespace MACOs.JY.ActorFramework
             _comm.ClearEvent();
 
         }
+
+        /// <summary>
+        /// Asynchronously execute the ActorCommand
+        /// </summary>
+        /// <param name="cmd">command that actor supports</param>
         public void ExecuteAsync(ActorCommand cmd)
         {
             try
             {
+                CheckCommandCompatilibity(cmd);
                 _comm.Send(cmd);
             }
             catch (ActorException ex)
@@ -143,14 +149,17 @@ namespace MACOs.JY.ActorFramework
         }
 
         /// <summary>
-        /// Send and execute the command asynchronously 
+        /// Asynchonously sends and executes the command 
         /// </summary>
-        /// <param name="cmd">command object</param>
+        /// <param name="methodName"> method name</param>
+        /// <param name="param">method parameters</param>
         public void ExecuteAsync(string methodName, params object[] param)
         {
             try
             {
-                _comm.Send(new ActorCommand(methodName, param));
+                var cmd = new ActorCommand(methodName, param);
+                CheckCommandCompatilibity(cmd);
+                _comm.Send(cmd);
             }
             catch (ActorException ex)
             {
@@ -165,11 +174,12 @@ namespace MACOs.JY.ActorFramework
         }
 
         /// <summary>
-        /// Get the first return element that store in the FIFO of actor object, this function will hold the thread until new data is derived or timeout
+        /// Get the first element of type T stored in the FIFO of actor object, this function will hold the thread until new data is derived or timeout
         /// </summary>
         /// <typeparam name="T">type of the result object</typeparam>
+        /// <param name="keepNullValue">keep the null return value</param>
         /// <param name="timeout">timeout in milliseconds</param>
-        /// <returns>true if new element is deququed</returns>
+        /// <returns></returns>
         public T GetFeeedback<T>(bool keepNullValue = false, int timeout = 5000)
         {
             object ans;
@@ -190,12 +200,12 @@ namespace MACOs.JY.ActorFramework
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
-                    throw new ActorException(string.Format("Timeout, value={0}",timeout));
+                    throw new ActorException(string.Format("Timeout, value={0}", timeout));
                 }
                 if (ans == null)
-                {                    
+                {
                     return default(T);
-                }                
+                }
                 return (T)System.Convert.ChangeType(ans, typeof(T));
             }
             catch (ActorException ex)
@@ -258,11 +268,21 @@ namespace MACOs.JY.ActorFramework
                 throw new ActorException(msg, ex);
             }
         }
+
+        /// <summary>
+        /// Send and execute the command synchronously. This method will wait until new element of type T shows up or timeout happens
+        /// </summary>
+        /// <typeparam name="T">type of return value</typeparam>
+        /// <param name="cmd">command object</param>
+        /// <returns></returns>
         public T Execute<T>(string methodName, params object[] param)
         {
             try
             {
-                _comm.Send(new ActorCommand(methodName, param));
+                var cmd = new ActorCommand(methodName, param);
+                CheckCommandCompatilibity(cmd);
+
+                _comm.Send(cmd);
                 return GetFeeedback<T>(false, TimeoutDefaultValue);
             }
             catch (ActorException ex)
@@ -279,15 +299,17 @@ namespace MACOs.JY.ActorFramework
         }
 
         /// <summary>
-        /// Send and execute the command asynchronously. This method is for functions that have return value
+        /// Send and execute the command synchronously. This method will wait until new element of type T shows up or timeout happens
         /// </summary>
         /// <typeparam name="T">type of return value</typeparam>
         /// <param name="cmd">command object</param>
-        /// <returns></returns>
-        public T Execute<T>(ActorCommand cmd, int timeout = 1000)
+        /// <returns></returns>        
+        public T Execute<T>(ActorCommand cmd, int timeout = 5000)
         {
             try
             {
+                CheckCommandCompatilibity(cmd);
+
                 _comm.Send(cmd);
                 return GetFeeedback<T>(false, timeout);
             }
@@ -303,17 +325,25 @@ namespace MACOs.JY.ActorFramework
             }
         }
 
+        /// <summary>
+        /// Send and execute the command synchronously. This method will wait until execution completed
+        /// </summary>
+        /// <param name="methodName">method name</param>
+        /// <param name="param">method parameters</param>
         public void Execute(string methodName, params object[] param)
         {
             try
             {
-                _comm.Send(new ActorCommand(methodName, param));
+                var cmd = new ActorCommand(methodName, param);
+                CheckCommandCompatilibity(cmd);
+
+                _comm.Send(cmd);
                 //bypass the return value, either is null or not
                 GetFeeedback<object>(true, TimeoutDefaultValue);
             }
             catch (ActorException ex)
             {
-                throw ex;
+                 throw ex;
             }
             catch (Exception ex)
             {
@@ -324,13 +354,16 @@ namespace MACOs.JY.ActorFramework
         }
 
         /// <summary>
-        /// Send and execute the command asynchronously. This method is for functions that void return value
+        /// Send and execute the command synchronously. This method will wait until execution completed
         /// </summary>
         /// <param name="cmd">command object</param>
-        public void Execute(ActorCommand cmd, int timeout = 1000)
+        /// <param name="timeout">timeout value, default=5000</param>
+        public void Execute(ActorCommand cmd, int timeout = 5000)
         {
             try
             {
+                CheckCommandCompatilibity(cmd);
+
                 _comm.Send(cmd);
                 //bypass the return value, either is null or not
                 GetFeeedback<object>(true, timeout);
@@ -350,46 +383,25 @@ namespace MACOs.JY.ActorFramework
         #endregion Public Methods
 
         #region Private Methods
-
-
-        #endregion
-
-        #region Events
         private void CommandReceived(object sender, ActorCommand e)
         {
             _logService.Info("Execute command: " + e.Name);
             _logService.Debug("Execution starts: " + e.ToString());
             try
             {
-
-                var mi = methods.First(x => (x.GetCustomAttribute(typeof(ActorCommandAttribute)) as ActorCommandAttribute).Name == e.Name);
-                var res = mi.Invoke(this, e.Parameters);
+                var res = methods.First(x => x.Name == e.Name).Invoke(this, e.Parameters);
                 response.Enqueue(res);
-                _logService.Debug("Execution complete: " + res.ToString());
+                OnMsgExecutionDone(e, res);
+                _logService.Debug("Execution complete: " + res?.ToString());
                 _logService.Info("Completed: " + e.Name);
 
             }
-            catch (InvalidOperationException ex)
-            {
-                string msg = string.Format("Method \"{0}\" is not found", e.Name);
-                _logService.Error(msg);
-                throw new ActorException(msg, ex);
-
-            }
-            catch (TargetParameterCountException ex)
-            {
-                string msg = string.Format("Number of parameters ({0}) is not correct", e.Parameters.Length);
-                _logService.Error(msg);
-                throw new ActorException(msg, ex);
-            }
             catch (ArgumentException ex)
             {
-                string msg = string.Format("Type of parameters is not correct");
+                string msg = string.Format("[{0}]Type of parameters are incorrect", e.Name);
                 _logService.Error(msg);
                 throw new ActorException(msg, ex);
-
             }
-
             catch (Exception ex)
             {
                 string msg = string.Format("Unknown Error");
@@ -398,11 +410,65 @@ namespace MACOs.JY.ActorFramework
             }
         }
 
+        private void OnMsgExecutionDone(ActorCommand cmd, object result)
+        {
+            MessageExecutionDone?.Invoke(this, new MessageExecutionDoneArgs(cmd, result));
+        }
+
+        private void CheckCommandCompatilibity(ActorCommand cmd)
+        {
+
+            //check the method name
+            if (!methods.Exists(x=>x.Name== cmd.Name))
+            {
+                string msg = string.Format("Method \"{0}\" is not found", cmd.Name);
+                _logService.Error(msg);
+                throw new ActorException(msg);
+            }
+
+            //check the parameters count
+            var param = methods.First(x=>x.Name==cmd.Name).GetParameters();
+            if (cmd.Parameters.Length != param.Length)
+            {
+                string msg = string.Format("[{0}]Number of parameters is not correct. Expected={1}, Actual={2}", cmd.Name, param.Length, cmd.Parameters.Length);
+                _logService.Error(msg);
+                throw new ActorException(msg);
+            }
+        }
+        #endregion
+
+        #region Events
+        /// <summary>
+        /// Event after execution is completed
+        /// </summary>
+        public event EventHandler<object> MessageExecutionDone;
+        
+        /// <summary>
+        /// Execution Completed event arguments
+        /// </summary>
+        public class MessageExecutionDoneArgs : EventArgs
+        {
+            public object ReturnData { get; set; }
+            public ActorCommand Command { get; set; }
+            public MessageExecutionDoneArgs(ActorCommand cmd, object returnValue)
+            {
+                Command = cmd;
+                ReturnData = returnValue;
+            }
+
+        }
         #endregion
 
         #region Static Methods
-        public static Dictionary<string, ParameterInfo[]> GetCommandList(Type t)
+        /// <summary>
+        /// Get the supported command list, which is commented by ActorCommandAttribute
+        /// </summary>
+        /// <param name="t">Type of Actor</param>
+        /// <returns></returns>
+        public static List<MethodInfo> GetCommandList(Type t)
         {
+            List<MethodInfo> methods = new List<MethodInfo>();
+
             var dict = new Dictionary<string, ParameterInfo[]>();
             var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
@@ -411,10 +477,10 @@ namespace MACOs.JY.ActorFramework
                 var att = item.GetCustomAttribute(typeof(ActorCommandAttribute));
                 if (att != null)
                 {
-                    dict.Add(((ActorCommandAttribute)att).Name, item.GetParameters());
+                    methods.Add(item);
                 }
             }
-            return dict;
+            return methods;
         }
 
         #endregion
