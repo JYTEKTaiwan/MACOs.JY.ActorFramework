@@ -20,6 +20,5 @@ namespace MACOs.JY.ActorFramework
         protected ActorException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-
     }
 }

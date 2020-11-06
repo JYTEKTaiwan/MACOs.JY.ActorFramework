@@ -2,7 +2,6 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 
@@ -12,11 +11,13 @@ namespace MACOs.JY.ActorFramework
     {
         public string Name { get; set; }
         public object[] Parameters { get; set; }
+
         public ActorCommand(string name, params object[] param)
         {
             Name = name;
             Parameters = param;
         }
+
         public static string ToJson(ActorCommand cmd, JsonConverter[] converters = null)
         {
             JObject jo = new JObject();
@@ -37,9 +38,9 @@ namespace MACOs.JY.ActorFramework
 
             return jo.ToString();
         }
+
         public static ActorCommand FromJson(string jsonString, JsonConverter[] converters = null)
         {
-
             ActorCommand cmd;
             List<JsonConverter> conv = new List<JsonConverter>();
             if (converters != null)
@@ -72,13 +73,14 @@ namespace MACOs.JY.ActorFramework
             return str;
         }
     }
+
     public class ArrayConverter : JsonConverter
     {
-
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             JArray.FromObject(value).WriteTo(writer);
         }
+
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             Type element = objectType.GetElementType();
@@ -90,18 +92,22 @@ namespace MACOs.JY.ActorFramework
             }
             return arr;
         }
+
         public override bool CanConvert(Type objectType)
         {
             return objectType.IsArray;
         }
     }
+
     public class ActorCommandCollection
     {
         public Dictionary<string, MethodInfo> SupportedMethods { get; } = new Dictionary<string, MethodInfo>();
+
         public bool Exists(string key)
         {
             return SupportedMethods.Any(x => x.Key == key);
         }
+
         public void Add(MethodInfo item)
         {
             SupportedMethods.Add(((ActorCommandAttribute)item.GetCustomAttribute(typeof(ActorCommandAttribute))).Name, item);
@@ -111,8 +117,8 @@ namespace MACOs.JY.ActorFramework
         {
             return SupportedMethods[key];
         }
-
     }
+
     public class ActorCommandAttribute : Attribute
     {
         public string Name { get; set; }

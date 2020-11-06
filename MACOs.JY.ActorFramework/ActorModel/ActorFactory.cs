@@ -14,14 +14,15 @@ namespace MACOs.JY.ActorFramework
         private static List<Actor> globalActorCollection = new List<Actor>();
 
         public static void EnableLogging()
-
         {
             _log = LogManager.GetLogger("Factory");
         }
+
         public static void DisableLogging()
         {
             _log = LogManager.CreateNullLogger();
         }
+
         public static T Create<T>(bool logEnabled, string alias, params object[] param)
         {
             _log.Info("Create New Actor");
@@ -46,19 +47,16 @@ namespace MACOs.JY.ActorFramework
                     {
                         return default(T);
                     }
-
                 }
                 else
                 {
                     return default(T);
                 }
-
             }
             catch (Exception ex)
             {
                 _log.Error(ex);
                 return default(T);
-
             }
         }
 
@@ -75,11 +73,12 @@ namespace MACOs.JY.ActorFramework
             actor.StopService();
             globalActorCollection.Remove(actor);
         }
+
         public static void Export(params Assembly[] assems)
         {
             XmlAttribute attribute;
             Type[] actors;
-            if (assems.Length==0)
+            if (assems.Length == 0)
             {
                 actors = Assembly.GetEntryAssembly().GetTypes().Where(x => x.BaseType == typeof(Actor)).ToArray();
             }
@@ -88,21 +87,18 @@ namespace MACOs.JY.ActorFramework
                 List<Type> dummy = new List<Type>();
                 foreach (Assembly item in assems)
                 {
-                    dummy.AddRange( item.GetTypes().Where(x => x.BaseType == typeof(Actor)));
-
+                    dummy.AddRange(item.GetTypes().Where(x => x.BaseType == typeof(Actor)));
                 }
                 actors = dummy.ToArray();
             }
-            
-            
-            
+
             XmlDocument xmlDoc = new XmlDocument();
             XmlNode rootNode = xmlDoc.CreateElement("Actors");
             xmlDoc.AppendChild(rootNode);
 
             foreach (var item in actors)
             {
-                var flags = BindingFlags.Instance|BindingFlags.Public | BindingFlags.NonPublic;
+                var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
                 XmlNode actorNode = xmlDoc.CreateElement(item.Name);
                 attribute = xmlDoc.CreateAttribute("Namespace");

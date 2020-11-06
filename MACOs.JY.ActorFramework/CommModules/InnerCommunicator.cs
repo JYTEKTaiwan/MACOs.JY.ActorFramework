@@ -19,16 +19,16 @@ namespace MACOs.JY.ActorFramework
             CommandReceived?.Invoke(sender, e);
         }
 
-
-
         public static InnerCommunicator CreateInstance(InternalCommnucationModule module)
         {
             switch (module)
             {
                 case InternalCommnucationModule.NetMQ:
                     return new CommModules.NetMQ();
+
                 case InternalCommnucationModule.ConcurrentQueue:
                     return new CommModules.Queue();
+
                 default:
                     return new CommModules.NetMQ();
             }
@@ -36,14 +36,13 @@ namespace MACOs.JY.ActorFramework
 
         public void ClearEvent()
         {
-            if (CommandReceived!=null)
+            if (CommandReceived != null)
             {
                 foreach (EventHandler<ActorCommand> item in CommandReceived.GetInvocationList())
                 {
                     CommandReceived -= item;
                 }
             }
-
         }
     }
 

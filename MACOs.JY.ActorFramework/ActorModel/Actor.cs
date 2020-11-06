@@ -4,7 +4,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
 
 namespace MACOs.JY.ActorFramework
@@ -12,15 +11,18 @@ namespace MACOs.JY.ActorFramework
     public abstract class Actor
     {
         #region Private Fields
+
         private ConcurrentQueue<object> response = new ConcurrentQueue<object>();
         private ActorCommandCollection methods = new ActorCommandCollection();
         private Logger _logService = LogManager.CreateNullLogger();
         private bool logEnabled = false;
         private InternalCommnucationModule _internalComm;
         private InnerCommunicator _comm;
-        #endregion
+
+        #endregion Private Fields
 
         #region Public Properties
+
         /// <summary>
         /// Default Timeout value for reading response (default=5000)
         /// </summary>
@@ -49,7 +51,6 @@ namespace MACOs.JY.ActorFramework
             get { return _internalComm; }
             set
             {
-
                 if (_comm != null)
                 {
                     StopService();
@@ -58,17 +59,19 @@ namespace MACOs.JY.ActorFramework
                 {
                     case InternalCommnucationModule.NetMQ:
                         break;
+
                     case InternalCommnucationModule.ConcurrentQueue:
                         break;
+
                     default:
                         break;
                 }
                 _comm = InnerCommunicator.CreateInstance(value);
                 StartService();
                 _internalComm = value;
-
             }
         }
+
         public bool LogEnabled
         {
             get { return logEnabled; }
@@ -122,7 +125,6 @@ namespace MACOs.JY.ActorFramework
         {
             _comm.Stop();
             _comm.ClearEvent();
-
         }
 
         /// <summary>
@@ -149,7 +151,7 @@ namespace MACOs.JY.ActorFramework
         }
 
         /// <summary>
-        /// Asynchonously sends and executes the command 
+        /// Asynchonously sends and executes the command
         /// </summary>
         /// <param name="methodName"> method name</param>
         /// <param name="param">method parameters</param>
@@ -260,7 +262,6 @@ namespace MACOs.JY.ActorFramework
                 _logService.Error(msg);
                 throw new ActorException(msg, ex);
             }
-
             catch (Exception ex)
             {
                 string msg = string.Format("Unknown Error");
@@ -295,7 +296,6 @@ namespace MACOs.JY.ActorFramework
                 _logService.Error(msg);
                 throw new ActorException(msg, ex);
             }
-
         }
 
         /// <summary>
@@ -303,7 +303,7 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         /// <typeparam name="T">type of return value</typeparam>
         /// <param name="cmd">command object</param>
-        /// <returns></returns>        
+        /// <returns></returns>
         public T Execute<T>(ActorCommand cmd, int timeout = 5000)
         {
             try
@@ -343,7 +343,7 @@ namespace MACOs.JY.ActorFramework
             }
             catch (ActorException ex)
             {
-                 throw ex;
+                throw ex;
             }
             catch (Exception ex)
             {
@@ -383,6 +383,7 @@ namespace MACOs.JY.ActorFramework
         #endregion Public Methods
 
         #region Private Methods
+
         private void CommandReceived(object sender, ActorCommand e)
         {
             _logService.Info("Execute command: " + e.Name);
@@ -394,7 +395,6 @@ namespace MACOs.JY.ActorFramework
                 OnMsgExecutionDone(e, res);
                 _logService.Debug("Execution complete: " + res?.ToString());
                 _logService.Info("Completed: " + e.Name);
-
             }
             catch (ArgumentException ex)
             {
@@ -414,12 +414,12 @@ namespace MACOs.JY.ActorFramework
         {
             MessageExecutionDone?.Invoke(this, new MessageExecutionDoneArgs(cmd, result));
         }
+
         private void CheckCommandCompatilibity(ActorCommand cmd)
         {
             Type t = typeof(ActorCommandAttribute);
 
-                
-                //check the method name
+            //check the method name
             if (!methods.Exists(cmd.Name))
             {
                 string msg = string.Format("Method \"{0}\" is not found", cmd.Name);
@@ -436,14 +436,16 @@ namespace MACOs.JY.ActorFramework
                 throw new ActorException(msg);
             }
         }
-        #endregion
+
+        #endregion Private Methods
 
         #region Events
+
         /// <summary>
         /// Event after execution is completed
         /// </summary>
         public event EventHandler<object> MessageExecutionDone;
-        
+
         /// <summary>
         /// Execution Completed event arguments
         /// </summary>
@@ -451,16 +453,18 @@ namespace MACOs.JY.ActorFramework
         {
             public object ReturnData { get; set; }
             public ActorCommand Command { get; set; }
+
             public MessageExecutionDoneArgs(ActorCommand cmd, object returnValue)
             {
                 Command = cmd;
                 ReturnData = returnValue;
             }
-
         }
-        #endregion
+
+        #endregion Events
 
         #region Static Methods
+
         /// <summary>
         /// Get the supported command list, which is commented by ActorCommandAttribute
         /// </summary>
@@ -468,7 +472,7 @@ namespace MACOs.JY.ActorFramework
         /// <returns></returns>
         public static ActorCommandCollection GetCommandList(Type t)
         {
-            ActorCommandCollection  methods = new ActorCommandCollection();
+            ActorCommandCollection methods = new ActorCommandCollection();
 
             var dict = new Dictionary<string, ParameterInfo[]>();
             var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
@@ -484,10 +488,6 @@ namespace MACOs.JY.ActorFramework
             return methods;
         }
 
-        #endregion
-
+        #endregion Static Methods
     }
-
-
-
 }

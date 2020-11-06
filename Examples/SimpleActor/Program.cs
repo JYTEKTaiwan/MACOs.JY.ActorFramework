@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using MACOs.JY.ActorFramework;
@@ -12,8 +13,9 @@ namespace SimpleActor
 
 
             ActorFactory.EnableLogging();
+
             var dev = ActorFactory.Create<Machine>(true, "daq_device");
-            dev.ExecuteAsync("Length",new double[] { 1, 2, 3, 4, 5 });
+            dev.ExecuteAsync("Length", new double[] { 1, 2, 3, 4, 5 });
             dev.Execute("Initial", 5);
             dev.ExecuteAsync("ConfigureTiming", 10000, 100);
             dev.ExecuteAsync("Start");
