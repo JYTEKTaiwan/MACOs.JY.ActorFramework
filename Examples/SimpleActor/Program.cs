@@ -17,7 +17,8 @@ namespace SimpleActor
 
             var dev = ActorFactory.Create<Machine>(true, "daq_device");
             dev.InternalCommType = InternalCommnucationModule.ConcurrentQueue;
-            await dev.ExecuteAsync("Length", new double[] { 1, 2, 3, 4, 5 });
+            var t = await dev.ExecuteAsync<int>("Length", new double[] { 1, 2, 3, 4, 5 });
+            Console.WriteLine(t);
             dev.Execute("Initial", 5);
             await dev.ExecuteAsync("ConfigureTiming", 10000, 100);
             dev.ExecuteAsync("Start");
@@ -45,7 +46,6 @@ namespace SimpleActor
         [ActorCommand("Initial")]
         private void Initial(int boardID)
         {
-
         }
 
         [ActorCommand("ConfigureTiming")]

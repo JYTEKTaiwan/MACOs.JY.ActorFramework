@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework
@@ -234,42 +235,37 @@ namespace MACOs.JY.ActorFramework
         /// <returns></returns>
         public T GetFeeedback<T>(bool keepNullValue = false, int timeout = 5000)
         {
-            object ans;
+            T result = default(T);
             Stopwatch sw = new Stopwatch();
             try
             {
                 sw.Restart();
                 do
                 {
-                    if (response.TryDequeue(out ans))
+                    if (TryGetFeeedback<T>(keepNullValue, out result))
                     {
-                        if (ans != null || keepNullValue)
-                        {
-                            break;
-                        }
+                        break;
                     }
+                    Thread.Sleep(1);
                 } while (sw.ElapsedMilliseconds <= timeout);
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
                     throw new ActorException(string.Format("Timeout, value={0}", timeout));
                 }
-                if (ans == null)
+                if (result == null)
                 {
                     return default(T);
                 }
-                return (T)System.Convert.ChangeType(ans, typeof(T));
+                else
+                {
+                    return result;
+                }
             }
             catch (ActorException ex)
             {
                 _logService.Error(ex.Message);
                 throw ex;
-            }
-            catch (InvalidCastException ex)
-            {
-                string msg = string.Format("Invalid Casting");
-                _logService.Error(msg);
-                throw new ActorException(msg, ex);
             }
             catch (Exception ex)
             {
@@ -285,20 +281,40 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of the result object</typeparam>
         /// <param name="result">result object</param>
         /// <returns>true if new element is deququed</returns>
-        public bool TryGetFeeedback<T>(out T result)
+        public bool TryGetFeeedback<T>(bool keepNullValue,out T result)
         {
             object ans;
             try
             {
-                bool dataAvailable = response.TryDequeue(out ans);
-                if (dataAvailable && ans != null)
+                if (response.TryDequeue(out ans))
                 {
-                    if (ans is T)
+                    if (ans == null)
                     {
-                        result = (T)ans;
+                        if (keepNullValue)
+                        {
+                            result = default(T);
+                            return true;
+                        }
+                        else
+                        {
+                            result = default(T);
+                            return false;
+                        }
                     }
-                    result = (T)System.Convert.ChangeType(ans, typeof(T));
-                    return true;
+                    else 
+                    {
+                        if (ans is T)
+                        {
+                            result = (T)ans;
+                        }
+                        else
+                        {
+                            result = (T)System.Convert.ChangeType(ans, typeof(T));
+                        }
+                        return true;
+
+                    }
+
                 }
                 else
                 {
