@@ -2,24 +2,26 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using MACOs.JY.ActorFramework;
 
 namespace SimpleActor
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
 
 
             ActorFactory.EnableLogging();
 
             var dev = ActorFactory.Create<Machine>(true, "daq_device");
-            dev.ExecuteAsync("Length", new double[] { 1, 2, 3, 4, 5 });
+            dev.InternalCommType = InternalCommnucationModule.ConcurrentQueue;
+            await dev.ExecuteAsync("Length", new double[] { 1, 2, 3, 4, 5 });
             dev.Execute("Initial", 5);
-            dev.ExecuteAsync("ConfigureTiming", 10000, 100);
+            await dev.ExecuteAsync("ConfigureTiming", 10000, 100);
             dev.ExecuteAsync("Start");
-            var data = dev.Execute<double[]>("ReadData");
+            var data = await dev.ExecuteAsync<double[]>("ReadData");
             dev.Execute("Stop");
             Console.ReadKey();
             ActorFactory.StopAllActors();

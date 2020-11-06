@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework
 {
@@ -18,7 +19,6 @@ namespace MACOs.JY.ActorFramework
         private bool logEnabled = false;
         private InternalCommnucationModule _internalComm;
         private InnerCommunicator _comm;
-
         #endregion Private Fields
 
         #region Public Properties
@@ -89,7 +89,7 @@ namespace MACOs.JY.ActorFramework
         /// <summary>
         /// Create an actor that accepts, executes, and responds in its own thread.
         /// </summary>
-        public Actor()
+        protected Actor()
         {
             LayoutRenderer.Register<BuildConfigLayoutRender>("buildConfiguration");
             methods = Actor.GetCommandList(this.GetType());
@@ -128,10 +128,60 @@ namespace MACOs.JY.ActorFramework
         }
 
         /// <summary>
-        /// Asynchronously execute the ActorCommand
+        /// Asynchronously send and executes the ActorCommand
         /// </summary>
         /// <param name="cmd">command that actor supports</param>
-        public void ExecuteAsync(ActorCommand cmd)
+        public async Task DoAsync(ActorCommand cmd)
+        {
+            try
+            {
+                await Task.Run(() =>
+                {
+                    CheckCommandCompatilibity(cmd);
+                    _comm.Send(cmd);
+                });
+            }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously send and executes the ActorCommand
+        /// </summary>
+        /// <param name="methodName"> method name</param>
+        /// <param name="param">method parameters</param>
+        public async Task DoAsync(string methodName, params object[] param)
+        {
+            try
+            {
+                var cmd = new ActorCommand(methodName, param);
+                await ExecuteAsync(cmd);
+
+            }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+        }
+        /// <summary>
+        /// Synchronously send and executes the ActorCommand
+        /// </summary>
+        /// <param name="cmd">command that actor supports</param>
+        public void Do(ActorCommand cmd)
         {
             try
             {
@@ -151,17 +201,17 @@ namespace MACOs.JY.ActorFramework
         }
 
         /// <summary>
-        /// Asynchonously sends and executes the command
+        /// Synchronously send and executes the ActorCommand
         /// </summary>
         /// <param name="methodName"> method name</param>
         /// <param name="param">method parameters</param>
-        public void ExecuteAsync(string methodName, params object[] param)
+        public void Do(string methodName, params object[] param)
         {
             try
             {
                 var cmd = new ActorCommand(methodName, param);
-                CheckCommandCompatilibity(cmd);
-                _comm.Send(cmd);
+                Do(cmd);
+
             }
             catch (ActorException ex)
             {
@@ -235,7 +285,7 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of the result object</typeparam>
         /// <param name="result">result object</param>
         /// <returns>true if new element is deququed</returns>
-        public bool GetFeeedbackAsync<T>(out T result)
+        public bool TryGetFeeedback<T>(out T result)
         {
             object ans;
             try
@@ -255,6 +305,37 @@ namespace MACOs.JY.ActorFramework
                     result = default(T);
                     return false;
                 }
+            }
+            catch (InvalidCastException ex)
+            {
+                string msg = string.Format("Invalid Casting");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+        }
+
+        /// <summary>
+        /// Get the first return element that store in the FIFO of actor object asynchronously
+        /// </summary>
+        /// <typeparam name="T">type of the result object</typeparam>
+        /// <param name="result">result object</param>
+        /// <returns>true if new element is deququed</returns>
+        public async Task<T> GetFeeedbackAsync<T>(bool keepNullValue = false, int timeout = 5000)
+        {
+            try
+            {
+                T result = default(T);
+                await Task.Run(() =>
+                {
+                    result = GetFeeedback<T>(keepNullValue, timeout);
+                });
+                return result;
             }
             catch (InvalidCastException ex)
             {
@@ -309,7 +390,6 @@ namespace MACOs.JY.ActorFramework
             try
             {
                 CheckCommandCompatilibity(cmd);
-
                 _comm.Send(cmd);
                 return GetFeeedback<T>(false, timeout);
             }
@@ -367,6 +447,116 @@ namespace MACOs.JY.ActorFramework
                 _comm.Send(cmd);
                 //bypass the return value, either is null or not
                 GetFeeedback<object>(true, timeout);
+            }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+        }
+        /// <summary>
+        /// Send and execute the command asynchronously. This method will wait until new element of type T shows up or timeout happens
+        /// </summary>
+        /// <typeparam name="T">type of return value</typeparam>
+        /// <param name="cmd">command object</param>
+        /// <returns></returns>
+        public async Task<T> ExecuteAsync<T>(string methodName, params object[] param)
+        {
+            try
+            {
+                var cmd = new ActorCommand(methodName, param);
+                return await ExecuteAsync<T>(cmd, TimeoutDefaultValue);
+            }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+        }
+
+        /// <summary>
+        /// Send and execute the command asynchronously. This method will wait until new element of type T shows up or timeout happens
+        /// </summary>
+        /// <typeparam name="T">type of return value</typeparam>
+        /// <param name="cmd">command object</param>
+        /// <returns></returns>
+        public async Task<T> ExecuteAsync<T>(ActorCommand cmd, int timeout = 5000)
+        {
+            try
+            {
+                T result = default(T);
+                await Task.Run(() =>
+                {
+                    CheckCommandCompatilibity(cmd);
+                    _comm.Send(cmd);
+                    result = GetFeeedback<T>(false, timeout);
+                });
+                return result;
+            }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+        }
+
+        /// <summary>
+        /// Send and execute the command asynchronously. This method will wait until execution completed
+        /// </summary>
+        /// <param name="methodName">method name</param>
+        /// <param name="param">method parameters</param>
+        public async Task ExecuteAsync(string methodName, params object[] param)
+        {
+            try
+            {
+                var cmd = new ActorCommand(methodName, param);
+                await ExecuteAsync(cmd, TimeoutDefaultValue);
+            }
+            catch (ActorException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format("Unknown Error");
+                _logService.Error(msg);
+                throw new ActorException(msg, ex);
+            }
+        }
+
+        /// <summary>
+        /// Send and execute the command asynchronously. This method will wait until execution completed
+        /// </summary>
+        /// <param name="cmd">command object</param>
+        /// <param name="timeout">timeout value, default=5000</param>
+        public async Task ExecuteAsync(ActorCommand cmd, int timeout = 5000)
+        {
+            try
+            {
+                await Task.Run(() =>
+                {
+                    CheckCommandCompatilibity(cmd);
+
+                    _comm.Send(cmd);
+                    //bypass the return value, either is null or not
+                    GetFeeedback<object>(true, timeout);
+
+                });
             }
             catch (ActorException ex)
             {

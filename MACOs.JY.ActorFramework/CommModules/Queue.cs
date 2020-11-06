@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework.CommModules
 {
@@ -18,6 +19,7 @@ namespace MACOs.JY.ActorFramework.CommModules
                 {
                     this.OnCommandReceived(this, cmd);
                 }
+
                 Thread.Sleep(1);
             }
         }
@@ -37,6 +39,7 @@ namespace MACOs.JY.ActorFramework.CommModules
 
         public override void Stop()
         {
+            q_cmd = new ConcurrentQueue<ActorCommand>();
             _isRunning = false;
             t_cmd.Join(500);
             if (t_cmd.IsAlive)
