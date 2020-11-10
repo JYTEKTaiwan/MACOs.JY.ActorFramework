@@ -10,7 +10,7 @@
     <Authors>JYTEK Taiwan</Authors>
     <PackageProjectUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework</PackageProjectUrl>
     <RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework.git</RepositoryUrl>
-    <Version>1.2.1</Version>
+    <Version>1.2.2</Version>
     <PackageIcon></PackageIcon>
     <PackageTags>.Net Standard;.Net Framework; Actor Model</PackageTags>
   </PropertyGroup>
