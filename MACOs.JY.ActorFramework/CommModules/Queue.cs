@@ -1,37 +1,38 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework.CommModules
 {
     internal class Queue : InnerCommunicator
     {
+
+        private Channel<ActorCommand> cmdChannel = Channel.CreateUnbounded<ActorCommand>();
         private ConcurrentQueue<ActorCommand> q_cmd = new ConcurrentQueue<ActorCommand>();
         private Thread t_cmd;
         private volatile bool _isRunning = false;
         private ActorCommand cmd;
 
-        private void CommandLoop()
+        private async void CommandLoop()
         {
             while (_isRunning)
             {
-                if (q_cmd.TryDequeue(out cmd))
-                {
-                    this.OnCommandReceived(this, cmd);
-                }
-
+                var cmd=await cmdChannel.Reader.ReadAsync();
+                this.OnCommandReceived(this, cmd);
                 Thread.Sleep(1);
             }
         }
 
-        public override void Send(ActorCommand cmd)
+        public override async void Send(ActorCommand cmd)
         {
-            q_cmd.Enqueue(cmd);
+           await cmdChannel.Writer.WriteAsync(cmd);
+          
         }
 
         public override void Start()
         {
-            this.ID = q_cmd.GetHashCode().ToString();
+            this.ID = cmdChannel.GetHashCode().ToString();
             _isRunning = true;
             t_cmd = new Thread(CommandLoop);
             t_cmd.Start();

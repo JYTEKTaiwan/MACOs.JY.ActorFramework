@@ -16,46 +16,37 @@ namespace SimpleActor
             ActorFactory.EnableLogging();
 
             var dev = ActorFactory.Create<Machine>(true, "daq_device");
-            dev.InternalCommType = InternalCommnucationModule.ConcurrentQueue;
-            var t = await dev.ExecuteAsync<int>("Length", new double[] { 1, 2, 3, 4, 5 });
-            Console.WriteLine(t);
-            dev.Execute("Initial", 5);
-            await dev.ExecuteAsync("ConfigureTiming", 10000, 100);
-            dev.ExecuteAsync("Start");
-            var data = await dev.ExecuteAsync<double[]>("ReadData");
-            dev.Execute("Stop");
-            Console.ReadKey();
+            var a=dev.Execute<int>("Len", new double[,] { { 1, 2, 3 }, { 4, 5, 6 } });
+            Console.WriteLine(a);
+            Console.ReadKey();  
             ActorFactory.StopAllActors();
         }
     }
 
 
-
-
-    public class Machine : Actor
+    public class Machine:Actor
     {
         private double _sampleRate;
         private int _samples;
         private double[] data;
 
-        [ActorCommand("Length")]
-        private int Length(double[] data)
+        [ActorCommand("Len")]
+        private int Length(double[,] data)
         {
             return data.Length;
         }
-        [ActorCommand("Initial")]
+
+        
         private void Initial(int boardID)
         {
         }
 
-        [ActorCommand("ConfigureTiming")]
         private void ConfigureTiming(double sampleRate, int samples)
         {
             _sampleRate = sampleRate;
             _samples = samples;
         }
 
-        [ActorCommand("Start")]
         private void Start()
         {
             data = new double[_samples];
@@ -65,7 +56,6 @@ namespace SimpleActor
             }
 
         }
-        [ActorCommand("ReadData")]
         private double[] ReadData()
         {
             double ratio = _sampleRate / _samples;
@@ -77,7 +67,6 @@ namespace SimpleActor
             return data;
         }
 
-        [ActorCommand("Stop")]
         private void Stop()
         {
         }

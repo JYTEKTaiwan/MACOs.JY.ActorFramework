@@ -23,14 +23,11 @@ namespace MACOs.JY.ActorFramework
         {
             switch (module)
             {
-                case InternalCommnucationModule.NetMQ:
-                    return new CommModules.NetMQ();
-
                 case InternalCommnucationModule.ConcurrentQueue:
                     return new CommModules.Queue();
 
                 default:
-                    return new CommModules.NetMQ();
+                    return new CommModules.Queue();
             }
         }
 
@@ -48,7 +45,7 @@ namespace MACOs.JY.ActorFramework
 
     public enum InternalCommnucationModule
     {
-        NetMQ,
+        //NetMQ,
         ConcurrentQueue,
     }
 }

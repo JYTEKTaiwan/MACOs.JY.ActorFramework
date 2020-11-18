@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework
@@ -14,7 +15,7 @@ namespace MACOs.JY.ActorFramework
     {
         #region Private Fields
 
-        private ConcurrentQueue<object> response = new ConcurrentQueue<object>();
+        private Channel<object> response = Channel.CreateUnbounded<object>();
         private ActorCommandCollection methods = new ActorCommandCollection();
         private Logger _logService = LogManager.CreateNullLogger();
         private bool logEnabled = false;
@@ -47,7 +48,7 @@ namespace MACOs.JY.ActorFramework
         /// <summary>
         /// Internal comuunication ways to choose, default is NetMQ
         /// </summary>
-        public InternalCommnucationModule InternalCommType
+        private InternalCommnucationModule InternalCommType
         {
             get { return _internalComm; }
             set
@@ -58,9 +59,6 @@ namespace MACOs.JY.ActorFramework
                 }
                 switch (value)
                 {
-                    case InternalCommnucationModule.NetMQ:
-                        break;
-
                     case InternalCommnucationModule.ConcurrentQueue:
                         break;
 
@@ -96,7 +94,7 @@ namespace MACOs.JY.ActorFramework
             methods = Actor.GetCommandList(this.GetType());
             this.ActorClassName = this.GetType().Name;
             ActorAliasName = ActorClassName;
-            InternalCommType = InternalCommnucationModule.NetMQ;
+            InternalCommType = InternalCommnucationModule.ConcurrentQueue;
         }
 
         ~Actor()
@@ -286,7 +284,7 @@ namespace MACOs.JY.ActorFramework
             object ans;
             try
             {
-                if (response.TryDequeue(out ans))
+                if (response.Reader.TryRead(out ans))
                 {
                     if (ans == null)
                     {
@@ -597,7 +595,7 @@ namespace MACOs.JY.ActorFramework
             try
             {
                 var res = methods.GetMethod(e.Name).Invoke(this, e.Parameters);
-                response.Enqueue(res);
+                response.Writer.WriteAsync(res).AsTask().Wait();
                 OnMsgExecutionDone(e, res);
                 _logService.Debug("Execution complete: " + res?.ToString());
                 _logService.Info("Completed: " + e.Name);
