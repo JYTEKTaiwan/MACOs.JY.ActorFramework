@@ -15,7 +15,20 @@ namespace MACOs.JY.ActorFramework
         public ActorCommand(string name, params object[] param)
         {
             Name = name;
-            Parameters = param;
+            this.Parameters = new object[param.Length];
+            for (int i = 0; i < param.Length; i++)
+            {
+                Type t = param[i].GetType();
+                if (t.IsArray)
+                {
+                    this.Parameters[i] = (param[i] as Array).Clone();
+                }
+                else
+                {
+                    this.Parameters[i] = param[i];
+                }
+
+            }
         }
 
         public static string ToJson(ActorCommand cmd, JsonConverter[] converters = null)

@@ -14,13 +14,13 @@ namespace MACOs.JY.ActorFramework
     public abstract class Actor
     {
         #region Private Fields
-
-        private Channel<object> response = Channel.CreateUnbounded<object>();
+        private Channel<object> response;
+        private Channel<ActorCommand> cmdChannel;
         private ActorCommandCollection methods = new ActorCommandCollection();
         private Logger _logService = LogManager.CreateNullLogger();
         private bool logEnabled = false;
-        private InternalCommnucationModule _internalComm;
-        private InnerCommunicator _comm;
+        private volatile bool _isRunning=false;
+        private ActorCommand _cmd;
         #endregion Private Fields
 
         #region Public Properties
@@ -45,31 +45,6 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         public string ActorAliasName { get; set; }
 
-        /// <summary>
-        /// Internal comuunication ways to choose, default is NetMQ
-        /// </summary>
-        private InternalCommnucationModule InternalCommType
-        {
-            get { return _internalComm; }
-            set
-            {
-                if (_comm != null)
-                {
-                    StopService();
-                }
-                switch (value)
-                {
-                    case InternalCommnucationModule.ConcurrentQueue:
-                        break;
-
-                    default:
-                        break;
-                }
-                _comm = InnerCommunicator.CreateInstance(value);
-                StartService();
-                _internalComm = value;
-            }
-        }
 
         public bool LogEnabled
         {
@@ -94,7 +69,8 @@ namespace MACOs.JY.ActorFramework
             methods = Actor.GetCommandList(this.GetType());
             this.ActorClassName = this.GetType().Name;
             ActorAliasName = ActorClassName;
-            InternalCommType = InternalCommnucationModule.ConcurrentQueue;
+            response = Channel.CreateUnbounded<object>(new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true });
+            cmdChannel = Channel.CreateUnbounded<ActorCommand>(new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true });
         }
 
         ~Actor()
@@ -109,12 +85,23 @@ namespace MACOs.JY.ActorFramework
         /// <summary>
         /// Start the actor
         /// </summary>
-        public void StartService()
+        public async Task StartService()
         {
             UniqueID = ActorAliasName + "-" + this.GetHashCode().ToString();
-            _comm.ClearEvent();
-            _comm.CommandReceived += CommandReceived;
-            _comm.Start();
+            _isRunning = true;
+            _ = Task.Run(async delegate
+            {
+                Stopwatch sw = new Stopwatch();
+
+                while (_isRunning)                
+                {
+                    _cmd=await cmdChannel.Reader.ReadAsync();
+                    var res = CommandReceived(_cmd);
+                    await response.Writer.WriteAsync(res);
+                }
+
+            });
+
         }
 
         /// <summary>
@@ -122,23 +109,21 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         public void StopService()
         {
-            _comm.Stop();
-            _comm.ClearEvent();
+            cmdChannel.Writer.TryComplete();
+            response.Writer.TryComplete();
+            _isRunning = false;
         }
 
         /// <summary>
         /// Asynchronously send and executes the ActorCommand
         /// </summary>
         /// <param name="cmd">command that actor supports</param>
-        public async Task DoAsync(ActorCommand cmd)
+        public async ValueTask DoAsync(ActorCommand cmd)
         {
             try
             {
-                await Task.Run(() =>
-                {
-                    CheckCommandCompatilibity(cmd);
-                    _comm.Send(cmd);
-                });
+                CheckCommandCompatilibity(cmd);
+                await cmdChannel.Writer.WriteAsync(cmd);
             }
             catch (ActorException ex)
             {
@@ -157,13 +142,12 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         /// <param name="methodName"> method name</param>
         /// <param name="param">method parameters</param>
-        public async Task DoAsync(string methodName, params object[] param)
+        public async ValueTask DoAsync(string methodName, params object[] param)
         {
             try
             {
                 var cmd = new ActorCommand(methodName, param);
-                await ExecuteAsync(cmd);
-
+                await cmdChannel.Writer.WriteAsync(cmd);
             }
             catch (ActorException ex)
             {
@@ -185,7 +169,7 @@ namespace MACOs.JY.ActorFramework
             try
             {
                 CheckCommandCompatilibity(cmd);
-                _comm.Send(cmd);
+                cmdChannel.Writer.WriteAsync(cmd).AsTask().Wait();
             }
             catch (ActorException ex)
             {
@@ -233,21 +217,18 @@ namespace MACOs.JY.ActorFramework
         /// <returns></returns>
         public T GetFeeedback<T>(bool keepNullValue = false, int timeout = 5000)
         {
-            T result = default(T);
-            Stopwatch sw = new Stopwatch();
+            object result = default(T);
+            bool isTimeout = false;
             try
             {
-                sw.Restart();
-                do
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                while (!response.Reader.TryRead(out result)&& !isTimeout)
                 {
-                    if (TryGetFeeedback<T>(keepNullValue, out result))
-                    {
-                        break;
-                    }
-                    Thread.Sleep(1);
-                } while (sw.ElapsedMilliseconds <= timeout);
+                    isTimeout = sw.ElapsedMilliseconds > timeout;
+                }
 
-                if (sw.ElapsedMilliseconds > timeout)
+                if (isTimeout)
                 {
                     throw new ActorException(string.Format("Timeout, value={0}", timeout));
                 }
@@ -257,7 +238,7 @@ namespace MACOs.JY.ActorFramework
                 }
                 else
                 {
-                    return result;
+                    return (T)Convert.ChangeType(result,typeof(T));
                 }
             }
             catch (ActorException ex)
@@ -279,7 +260,7 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of the result object</typeparam>
         /// <param name="result">result object</param>
         /// <returns>true if new element is deququed</returns>
-        public bool TryGetFeeedback<T>(bool keepNullValue,out T result)
+        public bool TryGetFeeedback<T>(bool keepNullValue, out T result)
         {
             object ans;
             try
@@ -299,7 +280,7 @@ namespace MACOs.JY.ActorFramework
                             return false;
                         }
                     }
-                    else 
+                    else
                     {
                         if (ans is T)
                         {
@@ -340,29 +321,26 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of the result object</typeparam>
         /// <param name="result">result object</param>
         /// <returns>true if new element is deququed</returns>
-        public async Task<T> GetFeeedbackAsync<T>(bool keepNullValue = false, int timeout = 5000)
+        public async ValueTask<T> GetFeeedbackAsync<T>()
         {
-            try
+            object result;
+            result = await response.Reader.ReadAsync();
+            if (result == null)
             {
-                T result = default(T);
-                await Task.Run(() =>
-                {
-                    result = GetFeeedback<T>(keepNullValue, timeout);
-                });
-                return result;
+                return default(T);
             }
-            catch (InvalidCastException ex)
+            else
             {
-                string msg = string.Format("Invalid Casting");
-                _logService.Error(msg);
-                throw new ActorException(msg, ex);
+                return (T)Convert.ChangeType(result, typeof(T));
             }
-            catch (Exception ex)
-            {
-                string msg = string.Format("Unknown Error");
-                _logService.Error(msg);
-                throw new ActorException(msg, ex);
-            }
+
+
+        }
+
+        public async ValueTask GetFeeedbackAsync()
+        {
+            object result = new object();
+            result = await response.Reader.ReadAsync();
         }
 
         /// <summary>
@@ -377,9 +355,9 @@ namespace MACOs.JY.ActorFramework
             {
                 var cmd = new ActorCommand(methodName, param);
                 CheckCommandCompatilibity(cmd);
-
-                _comm.Send(cmd);
-                return GetFeeedback<T>(false, TimeoutDefaultValue);
+                cmdChannel.Writer.WriteAsync(cmd).AsTask().Wait();
+                return GetFeeedback<T>();
+                //return GetFeeedback<T>(false, TimeoutDefaultValue);
             }
             catch (ActorException ex)
             {
@@ -404,7 +382,7 @@ namespace MACOs.JY.ActorFramework
             try
             {
                 CheckCommandCompatilibity(cmd);
-                _comm.Send(cmd);
+                cmdChannel.Writer.WriteAsync(cmd).AsTask().Wait();
                 return GetFeeedback<T>(false, timeout);
             }
             catch (ActorException ex)
@@ -431,7 +409,7 @@ namespace MACOs.JY.ActorFramework
                 var cmd = new ActorCommand(methodName, param);
                 CheckCommandCompatilibity(cmd);
 
-                _comm.Send(cmd);
+                cmdChannel.Writer.WriteAsync(cmd).AsTask().Wait();
                 //bypass the return value, either is null or not
                 GetFeeedback<object>(true, TimeoutDefaultValue);
             }
@@ -457,8 +435,7 @@ namespace MACOs.JY.ActorFramework
             try
             {
                 CheckCommandCompatilibity(cmd);
-
-                _comm.Send(cmd);
+                cmdChannel.Writer.WriteAsync(cmd).AsTask().Wait();
                 //bypass the return value, either is null or not
                 GetFeeedback<object>(true, timeout);
             }
@@ -479,12 +456,12 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of return value</typeparam>
         /// <param name="cmd">command object</param>
         /// <returns></returns>
-        public async Task<T> ExecuteAsync<T>(string methodName, params object[] param)
+        public async ValueTask<T> ExecuteAsync<T>(string methodName, params object[] param)
         {
             try
             {
                 var cmd = new ActorCommand(methodName, param);
-                return await ExecuteAsync<T>(cmd, TimeoutDefaultValue);
+                return await ExecuteAsync<T>(cmd);
             }
             catch (ActorException ex)
             {
@@ -504,18 +481,13 @@ namespace MACOs.JY.ActorFramework
         /// <typeparam name="T">type of return value</typeparam>
         /// <param name="cmd">command object</param>
         /// <returns></returns>
-        public async Task<T> ExecuteAsync<T>(ActorCommand cmd, int timeout = 5000)
+        public async ValueTask<T> ExecuteAsync<T>(ActorCommand cmd)
         {
             try
             {
-                T result = default(T);
-                await Task.Run(() =>
-                {
-                    CheckCommandCompatilibity(cmd);
-                    _comm.Send(cmd);
-                    result = GetFeeedback<T>(false, timeout);
-                });
-                return result;
+                CheckCommandCompatilibity(cmd);
+                await cmdChannel.Writer.WriteAsync(cmd);
+                return await GetFeeedbackAsync<T>();
             }
             catch (ActorException ex)
             {
@@ -534,12 +506,12 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         /// <param name="methodName">method name</param>
         /// <param name="param">method parameters</param>
-        public async Task ExecuteAsync(string methodName, params object[] param)
+        public async ValueTask ExecuteAsync(string methodName, params object[] param)
         {
             try
             {
                 var cmd = new ActorCommand(methodName, param);
-                await ExecuteAsync(cmd, TimeoutDefaultValue);
+                await ExecuteAsync(cmd);
             }
             catch (ActorException ex)
             {
@@ -558,19 +530,15 @@ namespace MACOs.JY.ActorFramework
         /// </summary>
         /// <param name="cmd">command object</param>
         /// <param name="timeout">timeout value, default=5000</param>
-        public async Task ExecuteAsync(ActorCommand cmd, int timeout = 5000)
+        public async ValueTask ExecuteAsync(ActorCommand cmd)
         {
             try
             {
-                await Task.Run(() =>
-                {
-                    CheckCommandCompatilibity(cmd);
+                CheckCommandCompatilibity(cmd);
 
-                    _comm.Send(cmd);
-                    //bypass the return value, either is null or not
-                    GetFeeedback<object>(true, timeout);
-
-                });
+                await cmdChannel.Writer.WriteAsync(cmd);
+                //bypass the return value, either is null or not
+                await GetFeeedbackAsync();
             }
             catch (ActorException ex)
             {
@@ -588,17 +556,18 @@ namespace MACOs.JY.ActorFramework
 
         #region Private Methods
 
-        private void CommandReceived(object sender, ActorCommand e)
+        private object CommandReceived(ActorCommand e)
         {
             _logService.Info("Execute command: " + e.Name);
             _logService.Debug("Execution starts: " + e.ToString());
             try
             {
+                Stopwatch sw = new Stopwatch();
                 var res = methods.GetMethod(e.Name).Invoke(this, e.Parameters);
-                response.Writer.WriteAsync(res).AsTask().Wait();
                 OnMsgExecutionDone(e, res);
                 _logService.Debug("Execution complete: " + res?.ToString());
                 _logService.Info("Completed: " + e.Name);
+                return res;
             }
             catch (ArgumentException ex)
             {
