@@ -563,7 +563,7 @@ namespace MACOs.JY.ActorFramework
             try
             {
                 Stopwatch sw = new Stopwatch();
-                var res = methods.GetMethod(e.Name).Invoke(this, e.Parameters);
+                var res = methods[e.Name].Invoke(this, e.Parameters);
                 OnMsgExecutionDone(e, res);
                 _logService.Debug("Execution complete: " + res?.ToString());
                 _logService.Info("Completed: " + e.Name);
@@ -601,7 +601,7 @@ namespace MACOs.JY.ActorFramework
             }
 
             //check the parameters count
-            var param = methods.GetMethod(cmd.Name).GetParameters();
+            var param = methods[cmd.Name].GetParameters();
             if (cmd.Parameters.Length != param.Length)
             {
                 string msg = string.Format("[{0}]Number of parameters is not correct. Expected={1}, Actual={2}", cmd.Name, param.Length, cmd.Parameters.Length);

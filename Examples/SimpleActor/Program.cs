@@ -29,6 +29,13 @@ namespace SimpleActor
 
     public class Machine:Actor
     {
+        public static List<int> list = new List<int>();
+
+        public static void Add(int i)
+        {
+            list.Add(i);
+        }
+
         private double _sampleRate;
         private int _samples;
         private double[] data;

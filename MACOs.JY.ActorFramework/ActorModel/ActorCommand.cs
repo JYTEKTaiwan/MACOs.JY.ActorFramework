@@ -112,24 +112,20 @@ namespace MACOs.JY.ActorFramework
         }
     }
 
-    public class ActorCommandCollection
+    public class ActorCommandCollection:Dictionary<string,MethodInfo>
     {
-        public Dictionary<string, MethodInfo> SupportedMethods { get; } = new Dictionary<string, MethodInfo>();
+        public string[] CommandList { get { return this.Keys.ToArray(); } }
 
         public bool Exists(string key)
         {
-            return SupportedMethods.Any(x => x.Key == key);
+            return this.Any(x => x.Key == key);
         }
 
         public void Add(MethodInfo item)
         {
-            SupportedMethods.Add(((ActorCommandAttribute)item.GetCustomAttribute(typeof(ActorCommandAttribute))).Name, item);
+            this.Add(((ActorCommandAttribute)item.GetCustomAttribute(typeof(ActorCommandAttribute))).Name, item);
         }
 
-        public MethodInfo GetMethod(string key)
-        {
-            return SupportedMethods[key];
-        }
     }
 
     public class ActorCommandAttribute : Attribute

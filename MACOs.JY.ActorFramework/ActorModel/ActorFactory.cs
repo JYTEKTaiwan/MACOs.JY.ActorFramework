@@ -23,6 +23,29 @@ namespace MACOs.JY.ActorFramework
             _log = LogManager.CreateNullLogger();
         }
 
+        private static IEnumerable<Type> GetParentTypes(Type type)
+        {
+            // is there any base type?
+            if (type == null)
+            {
+                yield break;
+            }
+
+            // return all implemented or inherited interfaces
+            foreach (var i in type.GetInterfaces())
+            {
+                yield return i;
+            }
+
+            // return all inherited types
+            var currentBaseType = type.BaseType;
+            while (currentBaseType != null)
+            {
+                yield return currentBaseType;
+                currentBaseType = currentBaseType.BaseType;
+            }
+        }
+
         public static T Create<T>(bool logEnabled, string alias, params object[] param)
         {
             _log.Info("Create New Actor");
@@ -30,14 +53,14 @@ namespace MACOs.JY.ActorFramework
             {
                 Type t = typeof(T);
 
-                if (t.BaseType == typeof(Actor))
+                if (GetParentTypes(t).Any(x => x == typeof(Actor)))
                 {
                     var g = t.GetConstructor(param.Select(x => x.GetType()).ToArray());
                     if (g != null)
                     {
                         var actor = g.Invoke(param) as Actor;
                         actor.ActorAliasName = alias;
-                        actor.StartService();
+                        actor.StartService().Wait();
                         actor.LogEnabled = logEnabled;
                         _log.Debug(string.Format("{0} is created", actor.UniqueID));
                         globalActorCollection.Add(actor);
