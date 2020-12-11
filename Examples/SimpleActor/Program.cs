@@ -12,20 +12,20 @@ namespace SimpleActor
     {
         static async Task Main(string[] args)
         {
+
             ActorFactory.EnableLogging();
             Stopwatch sw = new Stopwatch();
             sw.Restart();
             var dev = ActorFactory.Create<Machine>(true, "daq_device");
-            Console.WriteLine("Create\t"+ sw.ElapsedMilliseconds);
+            Console.WriteLine("Create\t" + sw.ElapsedMilliseconds);
             sw.Restart();
-            var a=dev.Execute<int>("Len", new double[,] { { 1, 2, 3 }, { 4, 5, 6 } });
-            Console.WriteLine("Complete\t"+sw.ElapsedMilliseconds);
+            var a = dev.Execute<int>("Len", new double[,] { { 1, 2, 3 }, { 4, 5, 6 } });
+            Console.WriteLine("Complete\t" + sw.ElapsedMilliseconds);
             Console.WriteLine(a);
-            Console.ReadKey();  
+            Console.ReadKey();
             ActorFactory.StopAllActors();
         }
     }
-
 
     public class Machine:Actor
     {

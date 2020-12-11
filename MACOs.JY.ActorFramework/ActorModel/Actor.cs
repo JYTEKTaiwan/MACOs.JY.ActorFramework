@@ -649,13 +649,21 @@ namespace MACOs.JY.ActorFramework
 
             var dict = new Dictionary<string, ParameterInfo[]>();
             var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
+            var m = t.GetMethods(flags);
             foreach (var item in t.GetMethods(flags))
             {
                 var att = item.GetCustomAttribute(typeof(ActorCommandAttribute));
                 if (att != null)
                 {
-                    methods.Add(item);
+                    string key= ((ActorCommandAttribute)att).Name;
+                    if (methods.Exists(key))
+                    {
+                        throw new ActorException("ActorCommand ["+key+"] already exists");
+                    }
+                    else
+                    {
+                        methods.Add(item);
+                    }
                 }
             }
             return methods;
