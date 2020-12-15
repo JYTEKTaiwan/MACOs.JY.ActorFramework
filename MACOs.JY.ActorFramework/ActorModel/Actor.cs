@@ -19,8 +19,9 @@ namespace MACOs.JY.ActorFramework
         private ActorCommandCollection methods = new ActorCommandCollection();
         private Logger _logService = LogManager.CreateNullLogger();
         private bool logEnabled = false;
-        private volatile bool _isRunning=false;
         private ActorCommand _cmd;
+        private CancellationTokenSource cts = new CancellationTokenSource();
+        private CancellationToken token;
         #endregion Private Fields
 
         #region Public Properties
@@ -71,6 +72,7 @@ namespace MACOs.JY.ActorFramework
             ActorAliasName = ActorClassName;
             response = Channel.CreateUnbounded<object>(new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true });
             cmdChannel = Channel.CreateUnbounded<ActorCommand>(new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true });
+            token = cts.Token;
         }
 
         ~Actor()
@@ -88,19 +90,18 @@ namespace MACOs.JY.ActorFramework
         public async Task StartService()
         {
             UniqueID = ActorAliasName + "-" + this.GetHashCode().ToString();
-            _isRunning = true;
             _ = Task.Run(async delegate
             {
                 Stopwatch sw = new Stopwatch();
 
-                while (_isRunning)                
+                while (!token.IsCancellationRequested)                
                 {
                     _cmd=await cmdChannel.Reader.ReadAsync();
                     var res = CommandReceived(_cmd);
                     await response.Writer.WriteAsync(res);
                 }
 
-            });
+            },token);
 
         }
 
@@ -111,7 +112,7 @@ namespace MACOs.JY.ActorFramework
         {
             cmdChannel.Writer.TryComplete();
             response.Writer.TryComplete();
-            _isRunning = false;
+            cts.Cancel();
         }
 
         /// <summary>

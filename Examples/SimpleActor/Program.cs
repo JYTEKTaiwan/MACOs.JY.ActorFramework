@@ -18,10 +18,14 @@ namespace SimpleActor
             sw.Restart();
             var dev = ActorFactory.Create<Machine>(true, "daq_device");
             Console.WriteLine("Create\t" + sw.ElapsedMilliseconds);
-            sw.Restart();
-            var a = dev.Execute<int>("Len", new double[,] { { 1, 2, 3 }, { 4, 5, 6 } });
-            Console.WriteLine("Complete\t" + sw.ElapsedMilliseconds);
-            Console.WriteLine(a);
+
+            for (int i = 0; i < 10; i++)
+            {
+                sw.Restart();
+                var a = dev.Execute<int>("Len", new double[,] { { 1, 2, 3 }, { 4, 5, 6 } });
+                Console.WriteLine("Complete\t" + sw.ElapsedMilliseconds);
+
+            }
             Console.ReadKey();
             ActorFactory.StopAllActors();
         }
