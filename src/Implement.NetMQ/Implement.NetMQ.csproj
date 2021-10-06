@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net472;net5.0</TargetFrameworks>
+    <AssemblyName>MACOs.JY.ActorFramework.Implement.NetMQ</AssemblyName>
+    <RootNamespace>MACOs.JY.ActorFramework.Implement.NetMQ</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetMQ" Version="4.0.1.6" />
+  </ItemGroup>
+
+</Project>
