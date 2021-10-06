@@ -15,11 +15,19 @@
 		<Authors>JYTEK TAIWAN Corp.</Authors>
 		<Product>MACOs.JY.ActorFramework</Product>
 		<Description>Bring the desktop app into message-based app using simplest but powerful librarirs. User can inherit the base class to build customized app.</Description>
-		<PackageIcon>JYTek.ico</PackageIcon>
+		<PackageIcon>JYTek.png</PackageIcon>
 		<PackageIconUrl />
 		<PackageTags>C#, Actor Framework</PackageTags>
 		<PackageReleaseNotes>20211006 v3.0 kickoff</PackageReleaseNotes>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="icon\JYTek.ico" />
+	  <None Include="..\..\icon\JYTek.png">
+	    <Pack>True</Pack>
+	    <PackagePath></PackagePath>
+	  </None>
+	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
@@ -34,6 +42,10 @@
 	    <Pack>True</Pack>
 	    <PackagePath></PackagePath>
 	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="icon\" />
 	</ItemGroup>
 	
 
