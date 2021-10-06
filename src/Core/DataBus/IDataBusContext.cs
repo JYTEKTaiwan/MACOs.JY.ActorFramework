@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace MACOs.Services.DataBus
+namespace MACOs.JY.ActorFramework.Core.DataBus
 {
     public interface IDataBusContext
     {

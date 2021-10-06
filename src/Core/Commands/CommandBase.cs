@@ -1,10 +1,10 @@
-﻿using MACOs.Services.Devices;
+﻿using MACOs.JY.ActorFramework.Core.Devices;
 using Newtonsoft.Json;
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace MACOs.Services.Commands
+namespace MACOs.JY.ActorFramework.Core.Commands
 {
     public abstract class CommandBase : ICommand
     {

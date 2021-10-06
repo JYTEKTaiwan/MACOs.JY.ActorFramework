@@ -1,8 +1,8 @@
-﻿using MACOs.Services.Commands;
-using MACOs.Services.DataBus;
-using MACOs.Services.Utilities;
+﻿using MACOs.JY.ActorFramework.Core.Commands;
+using MACOs.JY.ActorFramework.Core.DataBus;
+using MACOs.JY.ActorFramework.Core.Utilities;
 
-namespace MACOs.Services.Devices
+namespace MACOs.JY.ActorFramework.Core.Devices
 {
     public interface IDevice
     {

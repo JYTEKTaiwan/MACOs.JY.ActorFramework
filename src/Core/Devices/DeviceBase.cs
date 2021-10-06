@@ -1,6 +1,6 @@
-﻿using MACOs.Services.Commands;
-using MACOs.Services.DataBus;
-using MACOs.Services.Utilities;
+﻿using MACOs.JY.ActorFramework.Core.Commands;
+using MACOs.JY.ActorFramework.Core.DataBus;
+using MACOs.JY.ActorFramework.Core.Utilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace MACOs.Services.Devices
+namespace MACOs.JY.ActorFramework.Core.Devices
 {
     /// <summary>
     /// Base object that is used in MACOs.Service

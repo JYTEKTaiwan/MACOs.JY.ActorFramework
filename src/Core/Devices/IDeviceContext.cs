@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace MACOs.Services.Devices
+namespace MACOs.JY.ActorFramework.Core.Devices
 {
     public interface IDeviceContext
     {

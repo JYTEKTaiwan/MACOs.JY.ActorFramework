@@ -4,10 +4,16 @@
     <TargetFrameworks>net472;net5.0</TargetFrameworks>
     <AssemblyName>MACOs.JY.ActorFramework.Implement.NetMQ</AssemblyName>
     <RootNamespace>MACOs.JY.ActorFramework.Implement.NetMQ</RootNamespace>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetMQ" Version="4.0.1.6" />
+    <PackageReference Include="NetMQ" Version="4.0.1.7-pre" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Clients\Clients.csproj" />
+    <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
 </Project>

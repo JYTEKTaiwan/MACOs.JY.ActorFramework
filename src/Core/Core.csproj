@@ -7,8 +7,6 @@
 		<ApplicationIcon>JYTek.ico</ApplicationIcon>
 		<OutputType>Library</OutputType>
 		<StartupObject />
-		<SignAssembly>false</SignAssembly>
-		<AssemblyOriginatorKeyFile>Misc\MACOs.Services.pfx</AssemblyOriginatorKeyFile>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Version>3.0.0</Version>
 	</PropertyGroup>

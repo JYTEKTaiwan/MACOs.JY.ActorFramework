@@ -1,6 +1,6 @@
-﻿using MACOs.Services.Utilities;
+﻿using MACOs.JY.ActorFramework.Core.Utilities;
 
-namespace MACOs.Services.DataBus
+namespace MACOs.JY.ActorFramework.Core.DataBus
 {
     public interface IDataBus
     {

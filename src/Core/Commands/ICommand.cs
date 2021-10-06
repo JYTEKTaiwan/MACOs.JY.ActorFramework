@@ -1,7 +1,7 @@
-﻿using MACOs.Services.Devices;
+﻿using MACOs.JY.ActorFramework.Core.Devices;
 using System;
 
-namespace MACOs.Services.Commands
+namespace MACOs.JY.ActorFramework.Core.Commands
 {
     public interface ICommand
     {

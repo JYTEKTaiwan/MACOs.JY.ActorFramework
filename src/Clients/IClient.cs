@@ -1,6 +1,6 @@
-﻿using MACOs.Services.Commands;
+﻿using MACOs.JY.ActorFramework.Core.Commands;
 
-namespace MACOs.Services.Clients
+namespace MACOs.JY.ActorFramework.Clients
 {
     public interface IClient
     {
@@ -8,9 +8,6 @@ namespace MACOs.Services.Clients
         string Receive();
         string Query(ICommand cmd);
         void Disconnect();
-
         void Dispose();
-
-
     }
 }

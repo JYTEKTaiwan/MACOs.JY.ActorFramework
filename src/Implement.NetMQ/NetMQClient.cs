@@ -1,9 +1,9 @@
-﻿using MACOs.Services.Commands;
-using NetMQ;
+﻿using NetMQ;
 using NetMQ.Sockets;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
-using MACOs.JY.ActorFramework.Core;
+using MACOs.JY.ActorFramework.Clients;
+using MACOs.JY.ActorFramework.Core.Commands;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
