@@ -25,7 +25,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         public string Receive()
         {
-            return _socket.ReceiveMultipartStrings()[1];
+            return _socket.ReceiveMultipartStrings()[0];
         }
 
         public void Disconnect()

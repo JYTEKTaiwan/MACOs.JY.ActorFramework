@@ -5,15 +5,37 @@
     <AssemblyName>MACOs.JY.ActorFramework.Implement.NetMQ</AssemblyName>
     <RootNamespace>MACOs.JY.ActorFramework.Implement.NetMQ</RootNamespace>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>JYTEK TAIWAN CORP.</Authors>
+    <Copyright>JYTEK TAIWAN CORP.</Copyright>
+    <Product>MACOs.JY.ActorFramework</Product>
+    <Description>Implementation class using NetMQ as network bus</Description>
+    <PackageProjectUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Implement.NetMQ</RepositoryUrl>
+    <PackageTags>C#, Actor Framework</PackageTags>
+    <PackageIcon>JYTek.png</PackageIcon>
+    <PackageIconUrl />
+    <PackageReleaseNotes>NetMQ implementation</PackageReleaseNotes>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetMQ" Version="4.0.1.7-pre" />
+    <PackageReference Include="NetMQ" Version="4.0.1.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Clients\Clients.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icon\JYTek.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ProjectExtensions><VisualStudio><UserProperties BuildVersion_StartDate="2000/1/1" /></VisualStudio></ProjectExtensions>
 
 </Project>

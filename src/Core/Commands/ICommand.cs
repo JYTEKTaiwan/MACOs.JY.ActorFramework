@@ -8,6 +8,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         string Name { get; }
         Type Type { get;}
         IDevice Instance { get; set; }
-        string Execute();
+        object Execute();
+        string ConvertToString(object obj);
     }
 }

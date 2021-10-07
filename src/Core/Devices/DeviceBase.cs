@@ -38,7 +38,9 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         private string Bus_OnDataReady(object sender, object args)
         {
             _logger.Trace("New data event is triggered");
-            var ans = ConvertToCommand(args).Execute();
+            var cmd = ConvertToCommand(args);
+            var result = cmd.Execute();
+            var ans = cmd.ConvertToString(result);
             //notify event
             _logger.Debug("ExecuteCompleteEvent is fired");
             OnExecutionComplete?.Invoke(this, ans);

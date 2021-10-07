@@ -149,7 +149,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 _logger.Debug("OnDataReady is fired");
                 _logger.Debug($"Return data: {ans}");
 
-                _serverSocket.SendRoutingKeys(id).SendFrame(ans);
+                _serverSocket.SendMoreFrame(id);
+                _serverSocket.SendFrame(ans);
 
                 _logger.Info("Response sent");
 
