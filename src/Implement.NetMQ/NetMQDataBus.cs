@@ -15,7 +15,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
     /// Beacon is used to broadcast in the assigned address, so everyone could find 
     /// instance through NetMQ library.
     /// </summary>
-    internal class NetMQDataBus : IDataBus
+    public class NetMQDataBus : IDataBus
     {
         private NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
 
@@ -31,7 +31,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         public bool IsDisposed { get; set; } = false;
         public string Name { get; set; }
-        public DealerSocket InternalClient { get; set; }
+        public NetMQSocket InternalClient { get; set; }
 
         public event DataReadyEvent OnDataReady;
 
@@ -167,8 +167,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             {
                 if (_poller.IsRunning)
                 {
-                    _serverSocket.ReceiveReady -= _serverSocket_ReceiveReady;
-                    _serverSocket.Unbind(_serverSocket.Options.LastEndpoint);
+                    _serverSocket.ReceiveReady -= _serverSocket_ReceiveReady;                    
+                    //_serverSocket.Unbind(_serverSocket.Options.LastEndpoint);
                     _logger.Debug("Stop socket");
 
                     if (!_config.IsSilent)
@@ -197,7 +197,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         public string Query(string jsonContent)
         {
             InternalClient.SendFrame(jsonContent);
-            return InternalClient.ReceiveMultipartStrings()[1];
+            return InternalClient.ReceiveMultipartStrings()[0];
         }
 
         ~NetMQDataBus()

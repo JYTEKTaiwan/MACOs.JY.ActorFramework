@@ -13,11 +13,8 @@
     <RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Implement.NetMQ</RepositoryUrl>
     <PackageTags>C#, Actor Framework</PackageTags>
     <PackageIcon>JYTek.png</PackageIcon>
-    <PackageIconUrl />
+    <Version>1.0.5</Version>
     <PackageReleaseNotes>NetMQ implementation</PackageReleaseNotes>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
-    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

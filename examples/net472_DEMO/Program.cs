@@ -4,11 +4,7 @@ using MACOs.JY.ActorFramework.Implement.NetMQ;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace net472_DEMO
 {
@@ -16,7 +12,7 @@ namespace net472_DEMO
     {
         static void Main(string[] args)
         {
-            DeviceBase server = new TestService();
+            TestService server = new TestService();
             server.LoadDataBus(new NetMQDataBusContext()
             {
                 BeaconIPAddress = "",
@@ -27,10 +23,11 @@ namespace net472_DEMO
                 LocalIP=@"tcp://127.0.0.1"
                 
             });
-           
-            var clientConnIndo = new NetMQClientContext(9999, "DEMO");
-            var client = clientConnIndo.Search();
 
+            var clientConnInfo = new NetMQClientContext(9999, "DEMO");
+            var client = clientConnInfo.Search();
+            var g = server.ExecuteCommand(new Command("Test"));
+            Console.WriteLine(g);
             var sw = new Stopwatch();
             while (true)
             {
@@ -44,10 +41,10 @@ namespace net472_DEMO
                 else if (int.TryParse(str, out len))
                 {
                     var data = new double[len];
-                    client.Send(TestService.QueryCommand.Generate(data));
+                    client.Send(server.QueryCommand.Generate(data));
                     var res = client.Receive();
                     sw.Restart();
-                    client.Send(TestService.QueryCommand.Generate(data));
+                    client.Send(server.QueryCommand.Generate(data));
                     res = client.Receive();
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
@@ -84,10 +81,13 @@ namespace net472_DEMO
 
     public class TestService : DeviceBase
     {
-        public static Command<string> TestCommand { get; } = new Command<string>("WalkyTalky", null);
-        public static Command<double[]> QueryCommand { get; } = new Command<double[]>("ArrayData", null);
-
-        //public static CommandDateTime<int> ArrCommand { get; } = new CommandDateTime<int>("Array", null);
+        public Command<string> TestCommand { get; } = new Command<string>("WalkyTalky", null);
+        public Command<double[]> QueryCommand { get; } = new Command<double[]>("ArrayData", null);
+        public Command Command { get; } = new Command("Test");
+        public string Test()
+        {
+            return "Done";
+        }
         public string WalkyTalky(string content)
         {
             return string.Format($"[{DateTime.Now.ToString()}] Roger!\t{content}");
