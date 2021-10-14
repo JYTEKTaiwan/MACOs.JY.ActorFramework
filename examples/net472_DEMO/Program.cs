@@ -20,13 +20,12 @@ namespace net472_DEMO
                 Port=-1,
                 AliasName="DEMO",
                 IsSilent=false,
-                LocalIP=@"tcp://127.0.0.1"
-                
+                LocalIP=@"tcp://127.0.0.1"                
             });
 
             var clientConnInfo = new NetMQClientContext(9999, "DEMO");
             var client = clientConnInfo.Search();
-            var g = server.ExecuteCommand(new Command("Test"));
+            var g = client.Query(new Command("Test"));
             Console.WriteLine(g);
             var sw = new Stopwatch();
             while (true)
@@ -41,11 +40,9 @@ namespace net472_DEMO
                 else if (int.TryParse(str, out len))
                 {
                     var data = new double[len];
-                    client.Send(server.QueryCommand.Generate(data));
-                    var res = client.Receive();
+                    var res=server.ExecuteCommand(server.QueryCommand.Generate(data));
                     sw.Restart();
-                    client.Send(server.QueryCommand.Generate(data));
-                    res = client.Receive();
+                    res = server.ExecuteCommand(server.QueryCommand.Generate(data));
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
@@ -54,8 +51,7 @@ namespace net472_DEMO
                 else
                 {
                     sw.Restart();
-                    client.Send(new Command<string>("WalkyTalky", str));
-                    var res = client.Receive();
+                    var res = server.ExecuteCommand(new Command<string>("WalkyTalky", str));
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
@@ -105,18 +101,5 @@ namespace net472_DEMO
             return new double[len];
         }
 
-    }
-
-    public class TestServiceContext : IDeviceContext
-    {
-        public void LoadFromJson(JToken token)
-        {
-
-        }
-
-        public IDevice NewInstance()
-        {
-            return new TestService();
-        }
     }
 }

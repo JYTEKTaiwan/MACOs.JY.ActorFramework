@@ -13,9 +13,9 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         [JsonProperty]
         public int BeaconPort { get; set; } = 9999;
         [JsonProperty]
-        public string BeaconIPAddress { get; set; }
+        public string BeaconIPAddress { get; set; } = "";
         [JsonProperty]
-        public string AliasName { get; set; }
+        public string AliasName { get; set; } = "";
         [JsonProperty]
         public int Port { get; set; } = -1;
         [JsonProperty]

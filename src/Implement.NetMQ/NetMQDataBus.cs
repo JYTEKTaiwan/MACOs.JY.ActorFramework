@@ -31,8 +31,6 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         public bool IsDisposed { get; set; } = false;
         public string Name { get; set; }
-        public NetMQSocket InternalClient { get; set; }
-
         public event DataReadyEvent OnDataReady;
 
         /// <summary>
@@ -43,7 +41,6 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             _config = config;
             _logger.Info("Object is created");
-
         }
 
         /// <summary>
@@ -52,15 +49,13 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         public void Start()
         {
             _poller.RunAsync();            
-            _logger.Info("Poller starts");
-            InternalClient.Connect(_serverSocket.Options.LastEndpoint);            
+            _logger.Info("Poller starts");            
         }
         /// <summary>
         /// Stop
         /// </summary>
         public void Stop()
         {
-            InternalClient.Disconnect(_serverSocket.Options.LastEndpoint);
             _poller.StopAsync();
             _logger.Info("Poller stops");
         }
@@ -71,7 +66,6 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             _logger.Trace("Begin configuration");
             _serverSocket = new RouterSocket();
-            InternalClient = new DealerSocket();
 
             if (_config.Port > 0)
             {
@@ -87,9 +81,17 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
 
             _beacon = new NetMQBeacon();
-            string ip = string.IsNullOrEmpty(_config.BeaconIPAddress) ? "" : _config.BeaconIPAddress;
-            _beacon.Configure(_config.BeaconPort, ip);
-            
+
+            //if user didn't assign beacon ip, configure all interfaces
+            if (string.IsNullOrEmpty(_config.BeaconIPAddress))
+            {
+                _beacon.ConfigureAllInterfaces(_config.BeaconPort);
+            }
+            else
+            {
+                _beacon.Configure(_config.BeaconPort, _config.BeaconIPAddress);
+            }
+            //Silent the beacon or not
             if (!_config.IsSilent)
             {
                 _beacon.Publish(_config.AliasName + "=" + _serverSocket.Options.LastEndpoint, TimeSpan.FromSeconds(1));
@@ -102,9 +104,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             _monitor = new NetMQMonitor(_serverSocket, $"inproc://{_config.AliasName}", SocketEvents.All);
             _monitor.AttachToPoller(_poller);
             _monitor.EventReceived += Socket_Events;
-
-
-
+            
             Name = _config.AliasName;
             _logger.Info("Configuration is done");
         }
@@ -188,16 +188,14 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 _logger.Debug("Dispose poller");
                 IsDisposed = true;
                 _logger.Info("Object is successfully disposed");
-                InternalClient.Dispose();
 
             }
 
         }
 
         public string Query(string jsonContent)
-        {
-            InternalClient.SendFrame(jsonContent);
-            return InternalClient.ReceiveMultipartStrings()[0];
+        {            
+            return OnDataReady?.Invoke(null, jsonContent);
         }
 
         ~NetMQDataBus()

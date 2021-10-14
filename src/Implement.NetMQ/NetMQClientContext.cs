@@ -23,10 +23,16 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             var client = new NetMQClient();
             var _logger = NLog.LogManager.GetCurrentClassLogger();
             _logger.Trace("Start searching designated peer");
-            var address = string.IsNullOrEmpty(Address) ? "" : Address;
             string connectedString = "";
             var _beacon = new NetMQBeacon();
-            _beacon.Configure(Port, address);
+            if (string.IsNullOrEmpty(Address))
+            {
+                _beacon.ConfigureAllInterfaces(Port);
+            }
+            else
+            {
+                _beacon.Configure(Port, Address);
+            }
             _beacon.Subscribe(Alias);
             BeaconMessage msg;
             if (_beacon.TryReceive(TimeSpan.FromSeconds(5), out msg))

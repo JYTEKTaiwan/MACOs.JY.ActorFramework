@@ -54,7 +54,6 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         /// <param name="msg">Command object</param>
         public virtual string ExecuteCommand(ICommand cmd)
         {
-            string gg = JsonConvert.SerializeObject(cmd);            
             return _bus.Query(JsonConvert.SerializeObject(cmd));
         }
         public virtual ICommand ConvertToCommand(object msg)
