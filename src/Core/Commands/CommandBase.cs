@@ -18,8 +18,8 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         {
             Name = name;
             Type = this.GetType();
-            var param=Type.GetConstructors()[0].GetParameters();
-            ParameterTypes= param.Select(x => x.ParameterType).Skip(1).ToArray();            
+            var param = Type.GetConstructors()[0].GetParameters();
+            ParameterTypes = param.Select(x => x.ParameterType).Skip(1).ToArray();
         }
 
         protected CommandBase()
@@ -46,32 +46,32 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public static CommandBase Create<T1, T2>(string methodName, T1 param1, T2 param2)
         {
-            return new Command<T1, T2>(methodName, param1, param2) ;
+            return new Command<T1, T2>(methodName, param1, param2);
 
         }
         public static CommandBase Create<T1, T2, T3>(string methodName, T1 param1, T2 param2, T3 param3)
         {
-            return new Command<T1, T2, T3>(methodName, param1, param2, param3) ;
+            return new Command<T1, T2, T3>(methodName, param1, param2, param3);
 
         }
         public static CommandBase Create<T1, T2, T3, T4>(string methodName, T1 param1, T2 param2, T3 param3, T4 param4)
         {
-            return new Command<T1, T2, T3, T4>(methodName, param1, param2, param3, param4) ;
+            return new Command<T1, T2, T3, T4>(methodName, param1, param2, param3, param4);
 
         }
         public static CommandBase Create<T1, T2, T3, T4, T5>(string methodName, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5)
         {
-            return new Command<T1, T2, T3, T4, T5>(methodName, param1, param2, param3, param4, param5) ;
+            return new Command<T1, T2, T3, T4, T5>(methodName, param1, param2, param3, param4, param5);
 
         }
         public static CommandBase Create<T1, T2, T3, T4, T5, T6>(string methodName, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6)
         {
-            return new Command<T1, T2, T3, T4, T5, T6>(methodName, param1, param2, param3, param4, param5, param6) ;
+            return new Command<T1, T2, T3, T4, T5, T6>(methodName, param1, param2, param3, param4, param5, param6);
 
         }
         public static CommandBase Create<T1, T2, T3, T4, T5, T6, T7>(string methodName, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6, T7 param7)
         {
-            return new Command<T1, T2, T3, T4, T5, T6, T7>(methodName, param1, param2, param3, param4, param5, param6, param7) ;
+            return new Command<T1, T2, T3, T4, T5, T6, T7>(methodName, param1, param2, param3, param4, param5, param6, param7);
 
         }
 
@@ -91,8 +91,15 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public override object Execute()
         {
             var mi = Instance.GetType().GetMethod(Name, this.flags);
-            return  mi.Invoke(Instance, null);
-
+            if (mi == null)
+            {
+                throw new CommandNotFoundException($"Method not found: {Name}");
+            }
+            else
+            {
+                var response = mi.Invoke(Instance, null);
+                return response;
+            }
         }
         public CommandBase Generate()
         {
@@ -113,8 +120,14 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public override object Execute()
         {
             var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
-            return  mi.Invoke(Instance, new object[] { Parameter.Item1 });
-
+            if (mi == null)
+            {
+                throw new CommandNotFoundException($"Method not found: {Name}({ParameterTypes[0].Name})");
+            }
+            else
+            {
+                return mi.Invoke(Instance, new object[] { Parameter.Item1 });
+            }
         }
         public CommandBase Generate(T1 param1)
         {
@@ -138,7 +151,15 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public override object Execute()
         {
             var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
-            return  mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2 });
+            if (mi == null)
+            {
+                throw new CommandNotFoundException($"Method not found: {Name}({ParameterTypes[0].Name},{ParameterTypes[1].Name})");
+            }
+            else
+            {
+                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2 });
+
+            }
 
         }
         public CommandBase Generate(T1 param1, T2 param2)
@@ -166,7 +187,18 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public override object Execute()
         {
             var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
-            return  mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3 });
+            if (mi == null)
+            {
+                throw new CommandNotFoundException($"Method not found: " +
+                    $"{Name}("+
+                    $"{ParameterTypes[0].Name}," +
+                    $"{ParameterTypes[1].Name}," +
+                    $"{ParameterTypes[2].Name})");
+            }
+            else
+            {
+                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3 });
+            }
 
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3)
@@ -191,7 +223,20 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public override object Execute()
         {
             var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
-            return  mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4 });
+            if (mi == null)
+            {
+                throw new CommandNotFoundException($"Method not found: " +
+    $"{Name}(" +
+    $"{ParameterTypes[0].Name}," +
+    $"{ParameterTypes[1].Name}," +
+    $"{ParameterTypes[2].Name}," +
+    $"{ParameterTypes[3].Name})");
+
+            }
+            else
+            {
+                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4 });
+            }
 
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4)
@@ -218,7 +263,21 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public override object Execute()
         {
             var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
-            return  mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5 });
+            if (mi == null)
+            {
+                throw new CommandNotFoundException($"Method not found: " +
+    $"{Name}(" +
+    $"{ParameterTypes[0].Name}," +
+    $"{ParameterTypes[1].Name}," +
+    $"{ParameterTypes[2].Name}," +
+    $"{ParameterTypes[3].Name}," +
+    $"{ParameterTypes[4].Name})");
+            }
+
+            else
+            {
+                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5 });
+            }
 
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4, T5 param5)
@@ -245,8 +304,21 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public override object Execute()
         {
             var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
-            return  mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6 });
-
+            if (mi == null)
+            {
+                throw new CommandNotFoundException($"Method not found: " +
+    $"{Name}(" +
+    $"{ParameterTypes[0].Name}," +
+    $"{ParameterTypes[1].Name}," +
+    $"{ParameterTypes[2].Name}," +
+    $"{ParameterTypes[3].Name}," +
+    $"{ParameterTypes[4].Name}," +
+    $"{ParameterTypes[5].Name})");
+            }
+            else
+            { 
+                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6 });
+            }
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6)
         {
@@ -272,8 +344,22 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public override object Execute()
         {
             var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
-            return  mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6, Parameter.Item7 });
-
+            if (mi == null)
+            {
+                throw new CommandNotFoundException($"Method not found: " +
+    $"{Name}(" +
+    $"{ParameterTypes[0].Name}," +
+    $"{ParameterTypes[1].Name}," +
+    $"{ParameterTypes[2].Name}," +
+    $"{ParameterTypes[3].Name}," +
+    $"{ParameterTypes[4].Name}," +
+    $"{ParameterTypes[5].Name}," +
+    $"{ParameterTypes[6].Name})");
+            }
+            else
+            {
+                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6, Parameter.Item7 });
+            }
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6, T7 param7)
         {

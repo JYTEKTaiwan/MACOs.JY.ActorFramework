@@ -4,6 +4,8 @@ using Newtonsoft.Json;
 using System.Threading.Tasks;
 using MACOs.JY.ActorFramework.Clients;
 using MACOs.JY.ActorFramework.Core.Commands;
+using System;
+using Newtonsoft.Json.Linq;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
@@ -34,8 +36,9 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         }
         public void Dispose()
         {
-            if (_socket!=null&&_socket.IsDisposed)
+            if (_socket != null && !_socket.IsDisposed)
             {
+                Disconnect();
                 _socket.Dispose();
             }
         }
@@ -48,7 +51,15 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         public string Query(ICommand cmd)
         {
             Send(cmd);
-            return Receive();
+            var res = Receive();
+            if (res.Contains("[Error]:"))
+            {
+                throw new Exception(res);
+            }
+            else
+            {
+                return res;
+            }
         }
 
 

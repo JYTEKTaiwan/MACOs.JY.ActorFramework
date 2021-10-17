@@ -38,15 +38,32 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         private string Bus_OnDataReady(object sender, object args)
         {
             _logger.Trace("New data event is triggered");
-            var cmd = ConvertToCommand(args);
-            var result = cmd.Execute();
-            var ans = cmd.ConvertToString(result);
-            //notify event
-            _logger.Debug("ExecuteCompleteEvent is fired");
-            OnExecutionComplete?.Invoke(this, ans);
-            _logger.Debug($"command is executed with result: {ans}");
-            _logger.Info($"Command is executed ");
-            return ans;
+
+            ICommand cmd;
+            object result;
+            string ans = "";
+            //Convert to ICommand, execute, and convert the response to string
+            try
+            {
+                cmd = ConvertToCommand(args);
+                result = cmd.Execute();
+                ans = cmd.ConvertToString(result);
+                _logger.Debug("ExecuteCompleteEvent is fired");
+                OnExecutionComplete?.Invoke(this, ans);
+                _logger.Debug($"command is executed with result: {ans}");
+                _logger.Info($"Command is executed ");
+                return ans;
+            }
+            catch (CommandNotFoundException ex)
+            {
+                _logger.Error("Command is not found");
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error: {ex.Message}");
+                throw ex;
+            }
         }
         /// <summary>
         /// Execute command
@@ -54,17 +71,32 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         /// <param name="msg">Command object</param>
         public virtual string ExecuteCommand(ICommand cmd)
         {
-            return _bus.Query(JsonConvert.SerializeObject(cmd));
+            if (_bus != null)
+            {
+                return _bus.Query(JsonConvert.SerializeObject(cmd));
+            }
+            else
+            {
+                throw new DataBusNotLoadedExceptions("DataBus is not loaded");
+            }
         }
         public virtual ICommand ConvertToCommand(object msg)
         {
-            var str = msg.ToString() ;
-            JToken token = JToken.Parse(str);
-            Type t=token["Type"].ToObject<Type>();
-            var cmd = JsonConvert.DeserializeObject(str, t) as ICommand;
-            cmd.Instance = this;
-            _logger.Debug($"Convert to ICommand");
-            return cmd;
+            try
+            {
+                var str = msg.ToString();
+                JToken token = JToken.Parse(str);
+                Type t = token["Type"].ToObject<Type>();
+                var cmd = JsonConvert.DeserializeObject(str, t) as ICommand;
+                cmd.Instance = this;
+                _logger.Debug($"Convert to ICommand");
+                return cmd;
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
         public virtual void Dispose()
         {
@@ -77,13 +109,20 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         /// <param name="databusContext">Context object for coresponding databus.</param>
         public void LoadDataBus(IDataBusContext databusContext)
         {
-            _logger.Debug("Load databus from context");
-            _bus = databusContext.NewInstance();
-            _bus.Configure();
-            Name = _bus.Name;
-            _bus.OnDataReady += Bus_OnDataReady;
-            _bus.Start();
-            _logger.Debug("Databus starts");            
+            try
+            {
+                _logger.Debug("Load databus from context");
+                _bus = databusContext.NewInstance();
+                _bus.Configure();
+                Name = _bus.Name;
+                _bus.OnDataReady += Bus_OnDataReady;
+                _bus.Start();
+                _logger.Debug("Databus starts");
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
 
         }
 

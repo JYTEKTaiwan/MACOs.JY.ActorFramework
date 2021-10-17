@@ -1,9 +1,14 @@
-﻿using MACOs.JY.ActorFramework.Core.DataBus;
+﻿using MACOs.JY.ActorFramework.Core;
+using MACOs.JY.ActorFramework.Core.DataBus;
 using MACOs.JY.ActorFramework.Core.Utilities;
 using NetMQ;
 using NetMQ.Monitoring;
 using NetMQ.Sockets;
+using Newtonsoft.Json;
 using System;
+using System.Diagnostics;
+using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
@@ -28,7 +33,6 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         private NetMQPoller _poller;
         private NetMQMonitor _monitor;
         private readonly NetMQDataBusContext _config;
-
         public bool IsDisposed { get; set; } = false;
         public string Name { get; set; }
         public event DataReadyEvent OnDataReady;
@@ -39,24 +43,33 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// <param name="config">context information</param>
         public NetMQDataBus(NetMQDataBusContext config)
         {
+            AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
             _config = config;
             _logger.Info("Object is created");
         }
+
+        private void CurrentDomain_DomainUnload(object sender, EventArgs e)
+        {
+            //this will close all netmq sockets in the background
+            NetMQConfig.Cleanup(false);
+        }
+
 
         /// <summary>
         /// Start
         /// </summary>
         public void Start()
         {
-            _poller.RunAsync();            
-            _logger.Info("Poller starts");            
+            _poller.RunAsync();
+            _logger.Info("Poller starts");
         }
+
         /// <summary>
         /// Stop
         /// </summary>
         public void Stop()
         {
-            _poller.StopAsync();
+            _poller.Stop();
             _logger.Info("Poller stops");
         }
         /// <summary>
@@ -64,51 +77,151 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// </summary>
         public void Configure()
         {
-            _logger.Trace("Begin configuration");
+            try
+            {
+                _logger.Trace("Begin configuration");
+
+                RouterSocketConfig();
+
+                BeaconConfig();
+
+                _poller = new NetMQPoller();
+                _poller.Add(_serverSocket);
+                _poller.Add(_beacon);
+
+                _monitor = new NetMQMonitor(_serverSocket, $"inproc://{_config.AliasName}", SocketEvents.All);
+                _monitor.AttachToPoller(_poller);
+                _monitor.EventReceived += Socket_Events;
+
+                BeaconStart();
+
+                Name = _config.AliasName;
+                _logger.Info("Configuration is done");
+
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
+        }
+
+        public static void CleanUp(bool block=true)
+        {
+            NetMQConfig.Cleanup(block);
+        }
+        private void RouterSocketConfig()
+        {
             _serverSocket = new RouterSocket();
 
-            if (_config.Port > 0)
+            //check ip address (containing non-numbers or other invalid input
+            if (!_config.LocalIP.Contains("://"))
             {
-                _serverSocket.Bind($"{_config.LocalIP}:{_config.Port}");
-                _logger.Debug($"Socket binds to {_config.LocalIP}:{_config.Port}");
+                throw new ArgumentException($"Invalid listener address:  {_config.LocalIP}");
             }
-            else
+
+            //Check if ip string is valid
+            var str = _config.LocalIP.Split(new char[] { '/', '/' })[2];
+            try
             {
-                int port = _serverSocket.BindRandomPort(_config.LocalIP);
-                _logger.Debug($"Socket binds to {_config.LocalIP}:{port}");
+                IPAddress ip = IPAddress.Parse(str);
             }
-            _poller = new NetMQPoller();
+            catch (Exception ex)
+            {
+                throw new ArgumentException("Invalid listener address", ex);
+            }
+
+            //Chcek the port and configure
+            try
+            {
+                if (_config.Port>=65536)
+                {
+                    throw new ArgumentException("Invalid listener port, must smaller than 65536");
+                }
+                else if (_config.Port<0)
+                {
+                    int port = _serverSocket.BindRandomPort(_config.LocalIP);
+                    _logger.Debug($"Socket binds to {_config.LocalIP}:{port}");
+
+                }
+                else
+                {
+                    _serverSocket.Bind($"{_config.LocalIP}:{_config.Port}");
+                    _logger.Debug($"Socket binds to {_config.LocalIP}:{_config.Port}");
+                }
+            }
+            catch (Exception ex)
+            {            
+                throw new ArgumentException("Invalid listener address",ex);
+            }
+
             _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
 
+        }
+
+        private void BeaconConfig()
+        {
             _beacon = new NetMQBeacon();
 
-            //if user didn't assign beacon ip, configure all interfaces
+            //chcek if beacon port larger than 65536
+            if (_config.BeaconPort >= 65536 || _config.BeaconPort<0)
+            {
+                _beacon.Dispose();
+                throw new ArgumentException("Beacon port must between 0 and 65536");
+            }
+
+
+            //configure beacon
             if (string.IsNullOrEmpty(_config.BeaconIPAddress))
             {
                 _beacon.ConfigureAllInterfaces(_config.BeaconPort);
             }
             else
             {
+                try
+                {
+                    //Check if IP string is convertable
+                    IPAddress ip = IPAddress.Parse(_config.BeaconIPAddress);
+                }
+                catch (Exception ex)
+                {
+                    _beacon.Dispose();
+
+                    throw new ArgumentException("Invalid Beacon address", ex);
+                }
                 _beacon.Configure(_config.BeaconPort, _config.BeaconIPAddress);
             }
-            //Silent the beacon or not
-            if (!_config.IsSilent)
+
+
+            //check if beacon is sucessfully bounded to endpoint
+            if (string.IsNullOrEmpty(_beacon.BoundTo))
             {
-                _beacon.Publish(_config.AliasName + "=" + _serverSocket.Options.LastEndpoint, TimeSpan.FromSeconds(1));
+                _beacon.Dispose();
+
+                throw new ArgumentException("Invalid Beacon address");
             }
-            _logger.Debug($"Beacon broacasts at port {_config.BeaconPort}");
-
-            _poller.Add(_serverSocket);
-            _poller.Add(_beacon);
-
-            _monitor = new NetMQMonitor(_serverSocket, $"inproc://{_config.AliasName}", SocketEvents.All);
-            _monitor.AttachToPoller(_poller);
-            _monitor.EventReceived += Socket_Events;
-            
-            Name = _config.AliasName;
-            _logger.Info("Configuration is done");
         }
 
+        private void BeaconStart()
+        {
+            //Silent the beacon or not
+            try
+            {
+                if (!_config.IsSilent)
+                {
+                    _beacon.Publish(_config.AliasName + "=" + _serverSocket.Options.LastEndpoint, TimeSpan.FromSeconds(1));
+                    _logger.Debug($"Beacon broacasts at port {_config.BeaconPort}");
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _beacon.Dispose();
+                throw ex;
+            }
+
+        }
 
         /// <summary>
         /// TCP socket event handler
@@ -140,19 +253,30 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             //Frame 2 - Data frame (parameters)
             if (e.Socket.HasIn)
             {
-                _logger.Trace("New data is coming");
-                var id = e.Socket.ReceiveRoutingKey();
-                var content = e.Socket.ReceiveMultipartStrings();
+                RoutingKey id;
+                string ans = "";
+                try
+                {
+                    _logger.Trace("New data is coming");
+                    id = e.Socket.ReceiveRoutingKey();
+                    var content = e.Socket.ReceiveMultipartStrings();
 
-                _logger.Debug($"Content: {content[0]}");
-                var ans = OnDataReady?.Invoke(sender, content[0]);
-                _logger.Debug("OnDataReady is fired");
-                _logger.Debug($"Return data: {ans}");
+                    _logger.Debug($"Content: {content[0]}");
+                    ans = OnDataReady?.Invoke(sender, content[0]);
+                    _logger.Debug("OnDataReady is fired");
+                    _logger.Debug($"Return data: {ans}");
 
-                _serverSocket.SendMoreFrame(id);
-                _serverSocket.SendFrame(ans);
+                    _serverSocket.SendMoreFrame(id);
+                    _serverSocket.SendFrame(ans);
+                    _logger.Info("Response sent");
 
-                _logger.Info("Response sent");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Invoke error: {ex.Message}");
+                    _serverSocket.SendMoreFrame(id);
+                    _serverSocket.SendFrame($"[Error]: {ex.Message}");
+                }
 
             }
         }
@@ -167,7 +291,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             {
                 if (_poller.IsRunning)
                 {
-                    _serverSocket.ReceiveReady -= _serverSocket_ReceiveReady;                    
+                    _serverSocket.ReceiveReady -= _serverSocket_ReceiveReady;
                     //_serverSocket.Unbind(_serverSocket.Options.LastEndpoint);
                     _logger.Debug("Stop socket");
 
@@ -194,7 +318,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         }
 
         public string Query(string jsonContent)
-        {            
+        {
             return OnDataReady?.Invoke(null, jsonContent);
         }
 
