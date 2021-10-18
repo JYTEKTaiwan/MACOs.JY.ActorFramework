@@ -24,8 +24,8 @@ namespace net50_DEMO
 
             });
 
-            var clientConnIndo = new NetMQClientContext(9999, "DEMO");
-            var client = clientConnIndo.Search();
+            var clientConnInfo = new NetMQClientContext(9999, "DEMO");
+            var client = clientConnInfo.Search();
 
             var sw = new Stopwatch();
             while (true)

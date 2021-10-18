@@ -1,15 +1,10 @@
-﻿using MACOs.JY.ActorFramework.Core;
-using MACOs.JY.ActorFramework.Core.DataBus;
+﻿using MACOs.JY.ActorFramework.Core.DataBus;
 using MACOs.JY.ActorFramework.Core.Utilities;
 using NetMQ;
 using NetMQ.Monitoring;
 using NetMQ.Sockets;
-using Newtonsoft.Json;
 using System;
-using System.Diagnostics;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
@@ -106,7 +101,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
         }
 
-        public static void CleanUp(bool block=true)
+        public static void CleanUp(bool block = true)
         {
             NetMQConfig.Cleanup(block);
         }
@@ -134,11 +129,11 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             //Chcek the port and configure
             try
             {
-                if (_config.Port>=65536)
+                if (_config.Port >= 65536)
                 {
                     throw new ArgumentException("Invalid listener port, must smaller than 65536");
                 }
-                else if (_config.Port<0)
+                else if (_config.Port < 0)
                 {
                     int port = _serverSocket.BindRandomPort(_config.LocalIP);
                     _logger.Debug($"Socket binds to {_config.LocalIP}:{port}");
@@ -151,8 +146,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 }
             }
             catch (Exception ex)
-            {            
-                throw new ArgumentException("Invalid listener address",ex);
+            {
+                throw new ArgumentException("Invalid listener address", ex);
             }
 
             _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
@@ -164,7 +159,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             _beacon = new NetMQBeacon();
 
             //chcek if beacon port larger than 65536
-            if (_config.BeaconPort >= 65536 || _config.BeaconPort<0)
+            if (_config.BeaconPort >= 65536 || _config.BeaconPort < 0)
             {
                 _beacon.Dispose();
                 throw new ArgumentException("Beacon port must between 0 and 65536");

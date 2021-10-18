@@ -1,6 +1,5 @@
 ﻿using MACOs.JY.ActorFramework.Clients;
 using NetMQ;
-using NetMQ.Sockets;
 using System;
 using System.Net;
 
@@ -21,7 +20,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         }
         public IClient Search()
         {
-            NetMQClient client ;
+            NetMQClient client;
             var _logger = NLog.LogManager.GetCurrentClassLogger();
             _logger.Trace("Start searching designated peer");
             string connectedString = "";
@@ -41,7 +40,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             else
             {
                 _logger.Error("Peer search timeout");
-                client= null;
+                client = null;
             }
             _beacon.Unsubscribe();
             _beacon.Dispose();

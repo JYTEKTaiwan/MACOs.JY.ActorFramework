@@ -50,7 +50,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
                 ans = cmd.ConvertToString(result);
                 _logger.Debug("ExecuteCompleteEvent is fired");
                 OnExecutionComplete?.Invoke(this, ans);
-                _logger.Debug($"command is executed with result: {ans}");
+                _logger.Debug($"Command is executed with result: {ans}");
                 _logger.Info($"Command is executed ");
                 return ans;
             }
@@ -91,7 +91,6 @@ namespace MACOs.JY.ActorFramework.Core.Devices
                 cmd.Instance = this;
                 _logger.Debug($"Convert to ICommand");
                 return cmd;
-
             }
             catch (Exception ex)
             {
@@ -100,8 +99,16 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         }
         public virtual void Dispose()
         {
-            _bus.Kill();
-            _logger.Info("Object is successfully disposed");
+            try
+            {
+                _bus.Kill();
+                _logger.Info("Object is successfully disposed");
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
         /// <summary>
         /// Load databus from IDataBusContext object
@@ -132,13 +139,21 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         /// <param name="databus">Instance of DataBus</param>
         public void LoadDataBus(IDataBus databus)
         {
-            _logger.Debug("Load databus from instance");
-            _bus = databus;
-            _bus.Configure();
-            Name = _bus.Name;
-            _bus.OnDataReady += Bus_OnDataReady;
-            _bus.Start();
-            _logger.Debug("Databus starts");
+            try
+            {
+                _logger.Debug("Load databus from instance");
+                _bus = databus;
+                _bus.Configure();
+                Name = _bus.Name;
+                _bus.OnDataReady += Bus_OnDataReady;
+                _bus.Start();
+                _logger.Debug("Databus starts");
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         ~DeviceBase()

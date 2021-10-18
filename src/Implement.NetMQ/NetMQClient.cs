@@ -1,11 +1,9 @@
-﻿using NetMQ;
+﻿using MACOs.JY.ActorFramework.Clients;
+using MACOs.JY.ActorFramework.Core.Commands;
+using NetMQ;
 using NetMQ.Sockets;
 using Newtonsoft.Json;
-using System.Threading.Tasks;
-using MACOs.JY.ActorFramework.Clients;
-using MACOs.JY.ActorFramework.Core.Commands;
 using System;
-using Newtonsoft.Json.Linq;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
@@ -19,47 +17,95 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         }
         public void Connect(object dest)
         {
-            addr = dest.ToString();
-            _socket = new DealerSocket();
-            _socket.Connect(addr);
+            try
+            {
+                addr = dest.ToString();
+                _socket = new DealerSocket();
+                _socket.Connect(addr);
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
         }
 
 
         public string Receive()
         {
-            return _socket.ReceiveMultipartStrings()[0];
+            try
+            {
+                return _socket.ReceiveMultipartStrings()[0];
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         public void Disconnect()
         {
-            _socket.Disconnect(addr);
+            try
+            {
+                _socket.Disconnect(addr);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
         public void Dispose()
         {
-            if (_socket != null && !_socket.IsDisposed)
+            try
             {
-                Disconnect();
-                _socket.Dispose();
+                if (_socket != null && !_socket.IsDisposed)
+                {
+                    Disconnect();
+                    _socket.Dispose();
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
             }
         }
 
         public void Send(ICommand cmd)
         {
-            _socket.SendFrame(JsonConvert.SerializeObject(cmd));
+            try
+            {
+                _socket.SendFrame(JsonConvert.SerializeObject(cmd));
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
         }
 
         public string Query(ICommand cmd)
         {
-            Send(cmd);
-            var res = Receive();
-            if (res.Contains("[Error]:"))
+            try
             {
-                throw new Exception(res);
+                Send(cmd);
+                //return string begins
+                var res = Receive();
+                if (res.Contains("[Error]:"))
+                {
+                    throw new Exception(res);
+                }
+                else
+                {
+                    return res;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return res;
+                throw ex;
             }
+
         }
 
 
