@@ -16,6 +16,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
     /// </summary>
     public abstract class DeviceBase : IDevice
     {
+        
         private Logger _logger = LogManager.GetCurrentClassLogger();
         private IDataBus _bus;
 
@@ -71,14 +72,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         /// <param name="msg">Command object</param>
         public virtual string ExecuteCommand(ICommand cmd)
         {
-            if (_bus != null)
-            {
-                return _bus.Query(JsonConvert.SerializeObject(cmd));
-            }
-            else
-            {
-                throw new DataBusNotLoadedExceptions("DataBus is not loaded");
-            }
+            return Bus_OnDataReady(null, JsonConvert.SerializeObject(cmd));
         }
         public virtual ICommand ConvertToCommand(object msg)
         {
@@ -101,9 +95,8 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         {
             try
             {
-                _bus.Kill();
+                _bus?.Kill();
                 _logger.Info("Object is successfully disposed");
-
             }
             catch (Exception ex)
             {

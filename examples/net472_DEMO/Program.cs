@@ -5,6 +5,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
+using System.Linq;
+using System.Net;
 
 namespace net472_DEMO
 {
@@ -13,17 +15,17 @@ namespace net472_DEMO
         static void Main(string[] args)
         {
             TestService server = new TestService();
+            var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
+
             server.LoadDataBus(new NetMQDataBusContext()
             {
-                BeaconIPAddress = "",
+                IPAddress = ip,
                 BeaconPort=9999,
                 Port=-1,
                 AliasName="DEMO",
-                IsSilent=false,
-                LocalIP=@"tcp://127.0.0.1"                
             });
 
-            var clientConnInfo = new NetMQClientContext(9999, "DEMO");
+            var clientConnInfo = new NetMQClientContext(9999, "DEMO", ip);
             var client = clientConnInfo.Search();
             var g = client.Query(new Command("Test"));
             Console.WriteLine(g);

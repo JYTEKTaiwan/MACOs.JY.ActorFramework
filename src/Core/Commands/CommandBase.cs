@@ -7,6 +7,12 @@ using System.Runtime.CompilerServices;
 
 namespace MACOs.JY.ActorFramework.Core.Commands
 {
+    public static class GlobalCommand
+    {
+        public const string Connected = "CONNECTED";
+        public const string Accepted = "ACCEPTED";
+    }
+
     public abstract class CommandBase : ICommand
     {
         public BindingFlags flags { get; } = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
@@ -190,7 +196,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
-                    $"{Name}("+
+                    $"{Name}(" +
                     $"{ParameterTypes[0].Name}," +
                     $"{ParameterTypes[1].Name}," +
                     $"{ParameterTypes[2].Name})");
@@ -316,7 +322,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
     $"{ParameterTypes[5].Name})");
             }
             else
-            { 
+            {
                 return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6 });
             }
         }

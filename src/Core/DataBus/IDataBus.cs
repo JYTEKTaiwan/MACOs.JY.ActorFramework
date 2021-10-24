@@ -13,7 +13,6 @@ namespace MACOs.JY.ActorFramework.Core.DataBus
         /// Public event for new data coming
         /// </summary>
         event DataReadyEvent OnDataReady;
-        string Query(string jsonContent);
 
         /// <summary>
         /// Configure

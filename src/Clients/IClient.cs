@@ -7,7 +7,6 @@ namespace MACOs.JY.ActorFramework.Clients
         void Send(ICommand cmd);
         string Receive();
         string Query(ICommand cmd);
-        void Disconnect();
         void Dispose();
     }
 }

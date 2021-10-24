@@ -2,17 +2,26 @@
 using NetMQ;
 using System;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
+    public enum SocketType
+    {
+        tcp,
+        inproc,
+    }
     public class NetMQClientContext : IClientContext
     {
         private NetMQBeacon _beacon;
         public int Port { get; set; }
         public string Alias { get; set; }
         public string Address { get; set; } = "";
+        public SocketType Type { get; set; } = SocketType.tcp;
+        public int LocalPort { get; set; } = -1;
 
-        public NetMQClientContext(int port, string alias, string address = "")
+        public NetMQClientContext(int port, string alias, string address )
         {
             Port = port;
             Alias = alias;
@@ -20,51 +29,89 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         }
         public IClient Search()
         {
-            NetMQClient client;
-            var _logger = NLog.LogManager.GetCurrentClassLogger();
-            _logger.Trace("Start searching designated peer");
-            string connectedString = "";
-
-            BeaconConfig();
-            _beacon.Subscribe(Alias);
-
-            BeaconMessage msg;
-            if (_beacon.TryReceive(TimeSpan.FromSeconds(5), out msg))
+            NetMQClient client = null;
+            bool isAccepted = false;
+            bool res = false;
+            try
             {
-                connectedString = msg.String.Split('=')[1];
-                _logger.Debug($"Peer is found at {connectedString}");
-                _logger.Info("Peer is found");
                 client = new NetMQClient();
-                client.Connect(connectedString);
+                _beacon = new NetMQBeacon();
+
+                var _logger = NLog.LogManager.GetCurrentClassLogger();
+                _logger.Trace("Start searching designated peer");
+
+                BeaconCheck();
+
+                BeaconConfig();
+
+                client.Bind(Type + "://" + Address, LocalPort);
+                client.SocketAccept = () =>
+                {
+                    isAccepted = true;
+                    _beacon.Silence();
+                };
+                _beacon.Publish(Alias + ">" + client.EndPoint);
+                res = client.StartListening(5000);
+                client.SocketAccept = null;
+                _beacon.Silence();
+                _beacon.Dispose();
+
+                if (!res)
+                {
+                    if (isAccepted)
+                    {
+                        throw new NullReferenceException("Client not found: Connection is established, but ACK failed");
+                    }
+                    else
+                    {
+                        throw new NullReferenceException("Client not found: Connection is not established");
+
+                    }
+                }
+
+                return client;
+
             }
-            else
+            catch (Exception ex)
             {
-                _logger.Error("Peer search timeout");
+                _beacon?.Dispose();
+                client?.Dispose();
                 client = null;
+                throw ex;
             }
-            _beacon.Unsubscribe();
-            _beacon.Dispose();
-            return client;
         }
 
         private void BeaconConfig()
         {
-            _beacon = new NetMQBeacon();
-
-            //chcek if beacon port larger than 65536
-            if (Port >= 65536 || Port < 0)
-            {
-                _beacon.Dispose();
-                throw new ArgumentException("Beacon port must between 0 and 65536");
-            }
-
-
             //configure beacon
             if (string.IsNullOrEmpty(Address))
             {
                 _beacon.ConfigureAllInterfaces(Port);
             }
             else
+            {
+                _beacon.Configure(Port, Address);
+            }
+            //check if beacon is sucessfully bounded to endpoint
+            if (string.IsNullOrEmpty(_beacon.BoundTo))
+            {
+                _beacon.Dispose();
+
+                throw new ArgumentException("Invalid Beacon address");
+            }
+
+        }
+
+        private void BeaconCheck()
+        {
+
+            //chcek if beacon port larger than 65536
+            if (Port >= 65536 || Port < 0)
+            {
+                throw new ArgumentException("Beacon port must between 0 and 65536");
+            }
+
+            if (!string.IsNullOrEmpty(Address))
             {
                 try
                 {
@@ -73,21 +120,11 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 }
                 catch (Exception ex)
                 {
-                    _beacon.Dispose();
 
                     throw new ArgumentException("Invalid Beacon address", ex);
                 }
-                _beacon.Configure(Port, Address);
             }
 
-
-            //check if beacon is sucessfully bounded to endpoint
-            if (string.IsNullOrEmpty(_beacon.BoundTo))
-            {
-                _beacon.Dispose();
-
-                throw new ArgumentException("Invalid Beacon address");
-            }
         }
 
 

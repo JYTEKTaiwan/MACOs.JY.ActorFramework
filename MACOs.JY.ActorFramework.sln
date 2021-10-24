@@ -19,6 +19,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "icon", "icon", "{EC2381FC-A
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documents", "documents", "{CA67D9AA-8628-45CA-893B-6D34AD10FE39}"
+	ProjectSection(SolutionItems) = preProject
+		documents\README.md = documents\README.md
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "net50_DEMO", "examples\net50_DEMO\net50_DEMO.csproj", "{7DD0ABDC-E9F9-4ACD-A173-75CB0D6F910E}"
 EndProject
@@ -36,6 +39,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "unit test", "unit test", "{798B5413-F144-4AC8-830B-3543F48A5D2C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest_472", "UnitTest_472\UnitTest_472.csproj", "{C1794CB2-0A27-46F8-981C-C74BAFE770A8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HandshakeTest", "HandshakeTest\HandshakeTest.csproj", "{383556FA-1135-4768-A0A6-D9D44C75047A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -73,6 +78,10 @@ Global
 		{C1794CB2-0A27-46F8-981C-C74BAFE770A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C1794CB2-0A27-46F8-981C-C74BAFE770A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C1794CB2-0A27-46F8-981C-C74BAFE770A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{383556FA-1135-4768-A0A6-D9D44C75047A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{383556FA-1135-4768-A0A6-D9D44C75047A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{383556FA-1135-4768-A0A6-D9D44C75047A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{383556FA-1135-4768-A0A6-D9D44C75047A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -88,7 +97,7 @@ Global
 		{C1794CB2-0A27-46F8-981C-C74BAFE770A8} = {798B5413-F144-4AC8-830B-3543F48A5D2C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		BuildVersion_StartDate = 2000/1/1
 		SolutionGuid = {32B03236-DABD-45EA-84ED-C27B760D41A3}
+		BuildVersion_StartDate = 2000/1/1
 	EndGlobalSection
 EndGlobal

@@ -1,10 +1,13 @@
-﻿using MACOs.JY.ActorFramework.Core.DataBus;
+﻿using MACOs.JY.ActorFramework.Core.Commands;
+using MACOs.JY.ActorFramework.Core.DataBus;
 using MACOs.JY.ActorFramework.Core.Utilities;
 using NetMQ;
 using NetMQ.Monitoring;
 using NetMQ.Sockets;
 using System;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
@@ -31,6 +34,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         public bool IsDisposed { get; set; } = false;
         public string Name { get; set; }
         public event DataReadyEvent OnDataReady;
+        private string connectedString = "";
+        private CancellationTokenSource cts;
 
         /// <summary>
         /// Constructor
@@ -55,6 +60,9 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// </summary>
         public void Start()
         {
+            cts = new CancellationTokenSource();
+            WaitForConnection();
+
             _poller.RunAsync();
             _logger.Info("Poller starts");
         }
@@ -64,31 +72,52 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// </summary>
         public void Stop()
         {
+            cts.Cancel();
             _poller.Stop();
             _logger.Info("Poller stops");
         }
         /// <summary>
         /// Configure
         /// </summary>
-        public void Configure()
+        public void Configure2()
         {
             try
             {
                 _logger.Trace("Begin configuration");
 
-                RouterSocketConfig();
+                RouterSocketCheck();
+                BeaconCheck();
 
-                BeaconConfig();
+                _serverSocket = new RouterSocket();
+                _beacon = new NetMQBeacon();
 
                 _poller = new NetMQPoller();
                 _poller.Add(_serverSocket);
-                _poller.Add(_beacon);
+                _poller.Add(_beacon); 
 
                 _monitor = new NetMQMonitor(_serverSocket, $"inproc://{_config.AliasName}", SocketEvents.All);
                 _monitor.AttachToPoller(_poller);
                 _monitor.EventReceived += Socket_Events;
 
-                BeaconStart();
+                _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
+                //configure beacon
+                if (string.IsNullOrEmpty(_config.IPAddress))
+                {
+                    _beacon.ConfigureAllInterfaces(_config.BeaconPort);
+                }
+                else
+                {
+                    _beacon.Configure(_config.BeaconPort, _config.IPAddress);
+                }
+                //check if beacon is sucessfully bounded to endpoint
+                if (string.IsNullOrEmpty(_beacon.BoundTo))
+                {
+                    _beacon.Dispose();
+
+                    throw new ArgumentException("Invalid Beacon address");
+                }
+
+                WaitForConnection();
 
                 Name = _config.AliasName;
                 _logger.Info("Configuration is done");
@@ -101,152 +130,169 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
         }
 
+        public void Configure()
+        {
+            try
+            {
+                _logger.Trace("Begin configuration");
+
+                Name = _config.AliasName;
+
+                RouterSocketCheck();
+                BeaconCheck();
+
+                _serverSocket = new RouterSocket();
+                _beacon = new NetMQBeacon();
+
+                _logger.Debug($"Beacon listens at port {_config.BeaconPort}");
+
+                _poller = new NetMQPoller();
+                _poller.Add(_serverSocket);
+                _poller.Add(_beacon);
+
+                _monitor = new NetMQMonitor(_serverSocket, $"inproc://{_serverSocket.GetHashCode()}", SocketEvents.All);
+                _monitor.AttachToPoller(_poller);
+                _monitor.EventReceived += Socket_Events;
+
+                _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
+                //configure beacon
+                if (string.IsNullOrEmpty(_config.IPAddress))
+                {
+                    _beacon.ConfigureAllInterfaces(_config.BeaconPort);
+                }
+                else
+                {
+                    _beacon.Configure(_config.BeaconPort, _config.IPAddress);
+                }
+                //check if beacon is sucessfully bounded to endpoint
+                if (string.IsNullOrEmpty(_beacon.BoundTo))
+                {
+                    _beacon.Dispose();
+
+                    throw new ArgumentException("Invalid Beacon address");
+                }
+
+
+                _logger.Info("Configuration is done");
+
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
+        }
+
+
         public static void CleanUp(bool block = true)
         {
             NetMQConfig.Cleanup(block);
         }
-        private void RouterSocketConfig()
+        private void RouterSocketCheck()
         {
-            _serverSocket = new RouterSocket();
 
-            //check ip address (containing non-numbers or other invalid input
-            if (!_config.LocalIP.Contains("://"))
-            {
-                throw new ArgumentException($"Invalid listener address:  {_config.LocalIP}");
-            }
-
-            //Check if ip string is valid
-            var str = _config.LocalIP.Split(new char[] { '/', '/' })[2];
             try
             {
-                IPAddress ip = IPAddress.Parse(str);
+                IPAddress ip = IPAddress.Parse(_config.IPAddress);
             }
             catch (Exception ex)
             {
-                throw new ArgumentException("Invalid listener address", ex);
+                throw new ArgumentException($"Invalid listener address: {_config.IPAddress}", ex);
             }
-
-            //Chcek the port and configure
-            try
-            {
-                if (_config.Port >= 65536)
-                {
-                    throw new ArgumentException("Invalid listener port, must smaller than 65536");
-                }
-                else if (_config.Port < 0)
-                {
-                    int port = _serverSocket.BindRandomPort(_config.LocalIP);
-                    _logger.Debug($"Socket binds to {_config.LocalIP}:{port}");
-
-                }
-                else
-                {
-                    _serverSocket.Bind($"{_config.LocalIP}:{_config.Port}");
-                    _logger.Debug($"Socket binds to {_config.LocalIP}:{_config.Port}");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException("Invalid listener address", ex);
-            }
-
-            _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
 
         }
 
-        private void BeaconConfig()
+        private void BeaconCheck()
         {
-            _beacon = new NetMQBeacon();
 
             //chcek if beacon port larger than 65536
             if (_config.BeaconPort >= 65536 || _config.BeaconPort < 0)
             {
-                _beacon.Dispose();
                 throw new ArgumentException("Beacon port must between 0 and 65536");
             }
 
-
-            //configure beacon
-            if (string.IsNullOrEmpty(_config.BeaconIPAddress))
-            {
-                _beacon.ConfigureAllInterfaces(_config.BeaconPort);
-            }
-            else
+            if (!string.IsNullOrEmpty(_config.IPAddress))
             {
                 try
                 {
                     //Check if IP string is convertable
-                    IPAddress ip = IPAddress.Parse(_config.BeaconIPAddress);
+                    IPAddress ip = IPAddress.Parse(_config.IPAddress);
                 }
                 catch (Exception ex)
                 {
-                    _beacon.Dispose();
 
                     throw new ArgumentException("Invalid Beacon address", ex);
                 }
-                _beacon.Configure(_config.BeaconPort, _config.BeaconIPAddress);
+
             }
 
 
-            //check if beacon is sucessfully bounded to endpoint
-            if (string.IsNullOrEmpty(_beacon.BoundTo))
-            {
-                _beacon.Dispose();
-
-                throw new ArgumentException("Invalid Beacon address");
-            }
         }
 
-        private void BeaconStart()
+        private void WaitForConnection()
         {
-            //Silent the beacon or not
-            try
+            Task.Run(() =>
             {
-                if (!_config.IsSilent)
+                _beacon.Subscribe(_config.AliasName);
+
+                while (!cts.IsCancellationRequested)
                 {
-                    _beacon.Publish(_config.AliasName + "=" + _serverSocket.Options.LastEndpoint, TimeSpan.FromSeconds(1));
-                    _logger.Debug($"Beacon broacasts at port {_config.BeaconPort}");
+                    BeaconMessage msg;
+                    if (_beacon.TryReceive(TimeSpan.FromMilliseconds(100), out msg))
+                    {
+                        _beacon.Unsubscribe();
+                        _logger.Debug($"Beacon Received from {msg.PeerAddress}");
+                        //Check 
+                        var info = msg.String.Split('>')[1];
+                        _serverSocket.Connect(info);
 
+                    }
                 }
-
-            }
-            catch (Exception ex)
-            {
-                _beacon.Dispose();
-                throw ex;
-            }
+            });
 
         }
-
+       
         /// <summary>
         /// TCP socket event handler
         /// </summary>
         private void Socket_Events(object sender, NetMQMonitorEventArgs e)
         {
-            var socket = (e as NetMQMonitorSocketEventArgs).Socket;
-            if (e.SocketEvent != SocketEvents.Closed)
+            switch (e.SocketEvent)
             {
-                _logger.Debug($"Socket event triggered : [{e.SocketEvent}] {socket.RemoteEndPoint}");
+                case SocketEvents.Connected:
+
+                    break;
+                case SocketEvents.ConnectDelayed:
+                    break;
+                case SocketEvents.ConnectRetried:
+                    break;
+                case SocketEvents.Listening:
+                    break;
+                case SocketEvents.BindFailed:
+                    break;
+                case SocketEvents.Accepted:
+                    break;
+                case SocketEvents.AcceptFailed:
+                    break;
+                case SocketEvents.Closed:
+                    break;
+                case SocketEvents.CloseFailed:
+                    break;
+                case SocketEvents.Disconnected:
+                    break;
+                case SocketEvents.All:
+                    break;
+                default:
+                    break;
             }
-            else
-            {
-                _logger.Debug($"Socket event triggered : [{e.SocketEvent}]");
-
-            }
-
-
         }
 
         /// <summary>
         /// New data is received from routersocket
         /// </summary>
         private void _serverSocket_ReceiveReady(object sender, NetMQSocketEventArgs e)
-        {
-
-            //Frame 0 - RoutingKey (unique ID from DealerSocket)
-            //Frame 1 - Data frame (command class name)
-            //Frame 2 - Data frame (parameters)
-            if (e.Socket.HasIn)
+        {            
+            if (e.IsReadyToReceive)
             {
                 RoutingKey id;
                 string ans = "";
@@ -255,15 +301,25 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     _logger.Trace("New data is coming");
                     id = e.Socket.ReceiveRoutingKey();
                     var content = e.Socket.ReceiveMultipartStrings();
+                    if (content[0]== GlobalCommand.Accepted)
+                    {
+                        _serverSocket.SendMoreFrame(id);
+                        _serverSocket.SendFrame(GlobalCommand.Connected);
+                        _beacon.Subscribe(_config.AliasName);
 
-                    _logger.Debug($"Content: {content[0]}");
-                    ans = OnDataReady?.Invoke(sender, content[0]);
-                    _logger.Debug("OnDataReady is fired");
-                    _logger.Debug($"Return data: {ans}");
+                    }
+                    else
+                    {
+                        _logger.Debug($"Content: {content[0]}");
+                        ans = OnDataReady?.Invoke(sender, content[0]);
+                        _logger.Debug("OnDataReady is fired");
+                        _logger.Debug($"Return data: {ans}");
 
-                    _serverSocket.SendMoreFrame(id);
-                    _serverSocket.SendFrame(ans);
-                    _logger.Info("Response sent");
+                        _serverSocket.SendMoreFrame(id);
+                        _serverSocket.SendFrame(ans);
+                        _logger.Info("Response sent");
+
+                    }
 
                 }
                 catch (Exception ex)
@@ -286,22 +342,27 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             {
                 if (_poller.IsRunning)
                 {
+                    cts.Cancel();
+                    Thread.Sleep(100);
+
+                    _monitor.EventReceived -= Socket_Events;
                     _serverSocket.ReceiveReady -= _serverSocket_ReceiveReady;
-                    //_serverSocket.Unbind(_serverSocket.Options.LastEndpoint);
-                    _logger.Debug("Stop socket");
+                    //_serverSocket.Disconnect(_serverSocket.Options.LastEndpoint);
 
-                    if (!_config.IsSilent)
-                    {
-                        _beacon.Silence();
-                        _logger.Debug("Stop beacon");
-                    }
 
+                    //_serverSocket.Dispose();
+                    //_logger.Debug("Stop socket");
+
+                    //_beacon.Dispose();
+                    //_logger.Debug("Stop beacon");
+
+                    Stop();
                     _poller.RemoveAndDispose(_serverSocket);
                     _poller.RemoveAndDispose(_beacon);
                     _logger.Debug("Clear sockets in poller");
 
-                    Stop();
                 }
+                _monitor.DetachFromPoller();
                 _monitor.Dispose();
                 _poller.Dispose();
                 _logger.Debug("Dispose poller");
@@ -310,11 +371,6 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
             }
 
-        }
-
-        public string Query(string jsonContent)
-        {
-            return OnDataReady?.Invoke(null, jsonContent);
         }
 
         ~NetMQDataBus()
