@@ -52,6 +52,16 @@ namespace net472_DEMO
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
                     Console.WriteLine();
                 }
+                else if (str=="Now")
+                {
+                    sw.Restart();
+                    var res = server.ExecuteCommand(new DateTimeCommand("Now"));
+                    var elapsed = sw.ElapsedMilliseconds;
+                    Console.WriteLine(res);
+                    Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
+                    Console.WriteLine();
+
+                }
                 else
                 {
                     sw.Restart();
@@ -68,7 +78,17 @@ namespace net472_DEMO
         }
     }
 
+    public class DateTimeCommand : Command
+    {
+        public DateTimeCommand(string name) : base(name)
+        {
+        }
 
+        public override string ConvertToString(object obj)
+        {
+            return ((DateTime)obj).ToString("HH:mm:ss.fff");
+        }
+    }
     public class TestService : DeviceBase
     {
         public Command<string> TestCommand { get; } = new Command<string>("WalkyTalky", null);
@@ -94,6 +114,7 @@ namespace net472_DEMO
         {
             return new double[len];
         }
-
+        public DateTime Now()
+        { return DateTime.Now; }
     }
 }

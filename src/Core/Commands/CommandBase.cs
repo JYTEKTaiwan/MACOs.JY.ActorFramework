@@ -33,7 +33,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
 
         public abstract object Execute();
-        public virtual string Convert(object obj)
+        public string DefaultConvertString(object obj)
         {
             return obj != null ? obj.ToString() : "";
         }
@@ -42,7 +42,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             return obj != null ? obj.ToString() : "";
         }
 
-        public static CommandBase Create(string methodName, Func<object, string> converter = null)
+        public static CommandBase Create(string methodName)
         {
             return new Command(methodName);
         }
@@ -91,7 +91,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         public override string ConvertToString(object obj)
         {
-            return base.Convert(obj);
+            return base.DefaultConvertString(obj);
         }
 
         public override object Execute()
@@ -142,7 +142,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public override string ConvertToString(object obj)
         {
-            return base.Convert(obj);
+            return base.DefaultConvertString(obj);
         }
     }
     public class Command<T1, T2> : CommandBase
@@ -175,7 +175,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public override string ConvertToString(object obj)
         {
-            return base.Convert(obj);
+            return base.DefaultConvertString(obj);
         }
 
     }
@@ -214,7 +214,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public override string ConvertToString(object obj)
         {
-            return base.Convert(obj);
+            return base.DefaultConvertString(obj);
         }
 
     }
@@ -252,7 +252,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public override string ConvertToString(object obj)
         {
-            return base.Convert(obj);
+            return base.DefaultConvertString(obj);
         }
 
     }
@@ -293,7 +293,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public override string ConvertToString(object obj)
         {
-            return base.Convert(obj);
+            return base.DefaultConvertString(obj);
         }
 
     }
@@ -333,7 +333,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public override string ConvertToString(object obj)
         {
-            return base.Convert(obj);
+            return base.DefaultConvertString(obj);
         }
 
     }
@@ -374,7 +374,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public override string ConvertToString(object obj)
         {
-            return base.Convert(obj);
+            return base.DefaultConvertString(obj);
         }
 
     }
