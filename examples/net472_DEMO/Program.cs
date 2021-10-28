@@ -1,4 +1,4 @@
-﻿using MACOs.JY.ActorFramework.Core.Commands;
+﻿    using MACOs.JY.ActorFramework.Core.Commands;
 using MACOs.JY.ActorFramework.Core.Devices;
 using MACOs.JY.ActorFramework.Implement.NetMQ;
 using Newtonsoft.Json;
@@ -30,6 +30,8 @@ namespace net472_DEMO
             var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip };
             var client = clientConnInfo.Search();
             var sw = new Stopwatch();
+
+
             while (true)
             {
                 Console.Write("Enter Command: ");
@@ -60,6 +62,8 @@ namespace net472_DEMO
                     Console.WriteLine();
                 }
             }
+
+            client.Dispose();
             server.Dispose();
         }
     }

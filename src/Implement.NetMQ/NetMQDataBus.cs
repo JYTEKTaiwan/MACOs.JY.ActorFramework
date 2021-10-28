@@ -85,8 +85,14 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             try
             {
                 _logger.Trace("Begin configuration");
-
-                Name = _config.AliasName;
+                if (string.IsNullOrEmpty(_config.AliasName))
+                {
+                    Name = this.GetHashCode().ToString();
+                }
+                else
+                {
+                    Name = _config.AliasName;
+                }
 
                 RouterSocketConfig();
                 BeaconConfig();
@@ -192,7 +198,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             Task.Run(() =>
             {
-                _beacon.Subscribe(_config.AliasName);
+                _beacon.Subscribe(Name);
                 _logger.Debug($"Beacon listens at port {_config.BeaconPort}");
 
                 while (!cts.IsCancellationRequested)
