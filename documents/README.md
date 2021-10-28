@@ -2,7 +2,10 @@
 
 The Main purpose of this library is to bring a simpe framework that contains the transmission bus (IDataBus) and the coresponding command pattern object (ICommand). Any object ("Device") inherit from this framwork can easily  be accessed and controlled through "DataBus" using "Command".
 
-The 3 terms "Device", "DataBus", "Command" are the key concept of this framework and  explained below
+The 3 terms "Device", "DataBus", "Command" are the key concepts of this framework and  explained below
+
+## [DEVICE]
+	Device is the abstract class that contains "DataBus" as the communication interface. User can inherit from this class and 
 
 ## [Terminology]
 ### IDevice

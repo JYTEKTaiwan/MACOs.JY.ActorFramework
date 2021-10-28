@@ -6,6 +6,7 @@ using NetMQ.Monitoring;
 using NetMQ.Sockets;
 using System;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -79,57 +80,6 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// <summary>
         /// Configure
         /// </summary>
-        public void Configure2()
-        {
-            try
-            {
-                _logger.Trace("Begin configuration");
-
-                RouterSocketCheck();
-                BeaconCheck();
-
-                _serverSocket = new RouterSocket();
-                _beacon = new NetMQBeacon();
-
-                _poller = new NetMQPoller();
-                _poller.Add(_serverSocket);
-                _poller.Add(_beacon); 
-
-                _monitor = new NetMQMonitor(_serverSocket, $"inproc://{_config.AliasName}", SocketEvents.All);
-                _monitor.AttachToPoller(_poller);
-                _monitor.EventReceived += Socket_Events;
-
-                _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
-                //configure beacon
-                if (string.IsNullOrEmpty(_config.IPAddress))
-                {
-                    _beacon.ConfigureAllInterfaces(_config.BeaconPort);
-                }
-                else
-                {
-                    _beacon.Configure(_config.BeaconPort, _config.IPAddress);
-                }
-                //check if beacon is sucessfully bounded to endpoint
-                if (string.IsNullOrEmpty(_beacon.BoundTo))
-                {
-                    _beacon.Dispose();
-
-                    throw new ArgumentException("Invalid Beacon address");
-                }
-
-                WaitForConnection();
-
-                Name = _config.AliasName;
-                _logger.Info("Configuration is done");
-
-            }
-            catch (Exception ex)
-            {
-
-                throw ex;
-            }
-        }
-
         public void Configure()
         {
             try
@@ -138,13 +88,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
                 Name = _config.AliasName;
 
-                RouterSocketCheck();
-                BeaconCheck();
-
-                _serverSocket = new RouterSocket();
-                _beacon = new NetMQBeacon();
-
-                _logger.Debug($"Beacon listens at port {_config.BeaconPort}");
+                RouterSocketConfig();
+                BeaconConfig();
 
                 _poller = new NetMQPoller();
                 _poller.Add(_serverSocket);
@@ -154,23 +99,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 _monitor.AttachToPoller(_poller);
                 _monitor.EventReceived += Socket_Events;
 
-                _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
-                //configure beacon
-                if (string.IsNullOrEmpty(_config.IPAddress))
-                {
-                    _beacon.ConfigureAllInterfaces(_config.BeaconPort);
-                }
-                else
-                {
-                    _beacon.Configure(_config.BeaconPort, _config.IPAddress);
-                }
-                //check if beacon is sucessfully bounded to endpoint
-                if (string.IsNullOrEmpty(_beacon.BoundTo))
-                {
-                    _beacon.Dispose();
 
-                    throw new ArgumentException("Invalid Beacon address");
-                }
+                _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
 
 
                 _logger.Info("Configuration is done");
@@ -188,52 +118,82 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             NetMQConfig.Cleanup(block);
         }
-        private void RouterSocketCheck()
+        private void RouterSocketConfig()
         {
-
             try
             {
-                IPAddress ip = IPAddress.Parse(_config.IPAddress);
+                _serverSocket = new RouterSocket();
+                
             }
             catch (Exception ex)
             {
-                throw new ArgumentException($"Invalid listener address: {_config.IPAddress}", ex);
+                _serverSocket.Dispose();
+                throw new ArgumentException($"Socket created failed", ex);
             }
 
         }
 
-        private void BeaconCheck()
+        private void BeaconConfig()
         {
-
-            //chcek if beacon port larger than 65536
-            if (_config.BeaconPort >= 65536 || _config.BeaconPort < 0)
+            try
             {
-                throw new ArgumentException("Beacon port must between 0 and 65536");
-            }
+                _beacon = new NetMQBeacon();
 
-            if (!string.IsNullOrEmpty(_config.IPAddress))
-            {
-                try
+                bool emptyIP = string.IsNullOrEmpty(_config.BeaconIP);
+                if (_config.BeaconIP == "127.0.0.1")
                 {
-                    //Check if IP string is convertable
-                    IPAddress ip = IPAddress.Parse(_config.IPAddress);
+                    throw new BeaconException($"Please Use empty string when assigning 127.0.0.1 as ip address");
                 }
-                catch (Exception ex)
+                //chcek if beacon port larger than 65536
+                if (_config.BeaconPort >= 65536 || _config.BeaconPort < 0)
                 {
-
-                    throw new ArgumentException("Invalid Beacon address", ex);
+                    throw new BeaconException($"Beacon port must between 0 and 65536: {_config.BeaconPort}");
                 }
 
-            }
+                if (!emptyIP)
+                {
+                    try
+                    {
+                        //Check if IP string is convertable
+                        IPAddress ip = IPAddress.Parse(_config.BeaconIP);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new BeaconException($"Bad format for IP parameter: {_config.BeaconIP}", ex);
+                    }
+                }
 
+                //configure beacon
+                if (emptyIP)
+                {
+                    _beacon.ConfigureAllInterfaces(_config.BeaconPort);
+                }
+                else
+                {
+                    _beacon.Configure(_config.BeaconPort, _config.BeaconIP);
+                }
+
+                //check if beacon is sucessfully bounded to endpoint
+                if (string.IsNullOrEmpty(_beacon.BoundTo))
+                {
+                    _beacon.Dispose();
+
+                    throw new BeaconException($"Beacon binding failed: {_config.BeaconIP}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _beacon.Dispose();
+                throw ex;
+            }
 
         }
-
         private void WaitForConnection()
         {
             Task.Run(() =>
             {
                 _beacon.Subscribe(_config.AliasName);
+                _logger.Debug($"Beacon listens at port {_config.BeaconPort}");
 
                 while (!cts.IsCancellationRequested)
                 {
@@ -245,6 +205,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                         //Check 
                         var info = msg.String.Split('>')[1];
                         _serverSocket.Connect(info);
+                        _beacon.Subscribe(_config.AliasName);
 
                     }
                 }
@@ -340,34 +301,31 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
             if (!IsDisposed)
             {
-                if (_poller.IsRunning)
+                if (_poller != null)
                 {
-                    cts.Cancel();
-                    Thread.Sleep(100);
+                    if (_poller.IsRunning)
+                    {
+                        cts.Cancel();
+                        Thread.Sleep(100);
 
-                    _monitor.EventReceived -= Socket_Events;
-                    _serverSocket.ReceiveReady -= _serverSocket_ReceiveReady;
-                    //_serverSocket.Disconnect(_serverSocket.Options.LastEndpoint);
+                        _monitor.EventReceived -= Socket_Events;
+                        _serverSocket.ReceiveReady -= _serverSocket_ReceiveReady;
 
+                        Stop();
+                        _poller.RemoveAndDispose(_serverSocket);
+                        _poller.RemoveAndDispose(_beacon);
+                        _logger.Debug("Clear sockets in poller");
 
-                    //_serverSocket.Dispose();
-                    //_logger.Debug("Stop socket");
-
-                    //_beacon.Dispose();
-                    //_logger.Debug("Stop beacon");
-
-                    Stop();
-                    _poller.RemoveAndDispose(_serverSocket);
-                    _poller.RemoveAndDispose(_beacon);
-                    _logger.Debug("Clear sockets in poller");
+                    }
+                    _monitor.DetachFromPoller();
+                    _monitor.Dispose();
+                    _poller.Dispose();
+                    _logger.Debug("Dispose poller");
+                    IsDisposed = true;
+                    _logger.Info("Object is successfully disposed");
+                    GC.Collect();
 
                 }
-                _monitor.DetachFromPoller();
-                _monitor.Dispose();
-                _poller.Dispose();
-                _logger.Debug("Dispose poller");
-                IsDisposed = true;
-                _logger.Info("Object is successfully disposed");
 
             }
 
@@ -375,9 +333,26 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         ~NetMQDataBus()
         {
-
         }
 
+    }
+    public class BeaconException : Exception
+    {
+        public BeaconException()
+        {
+        }
+
+        public BeaconException(string message) : base(message)
+        {
+        }
+
+        public BeaconException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
+        protected BeaconException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
     }
 
 }

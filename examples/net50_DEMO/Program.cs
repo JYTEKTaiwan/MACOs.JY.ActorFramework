@@ -5,6 +5,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
+using System.Linq;
+using System.Net;
 
 namespace net50_DEMO
 {
@@ -12,21 +14,21 @@ namespace net50_DEMO
     {
         static void Main(string[] args)
         {
-            DeviceBase server = new TestService();
+            Console.WriteLine("========================================================================================");
+            Console.WriteLine("== Welcome to MACOs.JY.ActorFramework example, there are 3 types of command supported ==");
+            Console.WriteLine("==      1. key in Q will leave the program                                            ==");
+            Console.WriteLine("==      2. key in any text except Q will immediate response                           ==");
+            Console.WriteLine("==      3. key in number will reponse the double array with the assigned size         ==");
+            Console.WriteLine("========================================================================================");
+            TestService server = new TestService();
+            var ip = "127.0.0.1";
             server.LoadDataBus(new NetMQDataBusContext()
             {
-                BeaconIPAddress = "",
-                BeaconPort = 9999,
-                Port = -1,
                 AliasName = "DEMO",
-                IsSilent = false,
-                LocalIP = @"tcp://127.0.0.1"
-
             });
 
-            var clientConnInfo = new NetMQClientContext(9999, "DEMO");
+            var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip };
             var client = clientConnInfo.Search();
-
             var sw = new Stopwatch();
             while (true)
             {
@@ -40,11 +42,9 @@ namespace net50_DEMO
                 else if (int.TryParse(str, out len))
                 {
                     var data = new double[len];
-                    client.Send(TestService.QueryCommand.Generate(data));
-                    var res = client.Receive();
+                    var res = server.ExecuteCommand(server.QueryCommand.Generate(data));
                     sw.Restart();
-                    client.Send(TestService.QueryCommand.Generate(data));
-                    res = client.Receive();
+                    res = server.ExecuteCommand(server.QueryCommand.Generate(data));
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
@@ -53,13 +53,11 @@ namespace net50_DEMO
                 else
                 {
                     sw.Restart();
-                    client.Send(TestService.TestCommand.Generate(str));
-                    var res = client.Receive();
+                    var res = server.ExecuteCommand(new Command<string>("WalkyTalky", str));
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
                     Console.WriteLine();
-
                 }
             }
             server.Dispose();
@@ -69,33 +67,29 @@ namespace net50_DEMO
 
     public class TestService : DeviceBase
     {
-        public static Command<string> TestCommand { get; } = new Command<string>("WalkyTalky", null);
-        public static Command<double[]> QueryCommand { get; } = new Command<double[]>("ArrayData", null);
+        public Command<string> TestCommand { get; } = new Command<string>("WalkyTalky", null);
+        public Command<double[]> QueryCommand { get; } = new Command<double[]>("ArrayData", null);
+        public Command Command { get; } = new Command("Test");
+        public string Test()
+        {
+            return "Done";
+        }
         public string WalkyTalky(string content)
         {
             return string.Format($"[{DateTime.Now.ToString()}] Roger!\t{content}");
         }
-        public string Sum(int x, int y, int z, int t)
+        public void Sum(int x, int y, int z, int t)
         {
-            return (x + y + z + t).ToString();
+            (x + y + z + t).ToString();
         }
         public string ArrayData(double[] data)
         {
             return JsonConvert.SerializeObject(data);
         }
-
-    }
-
-    public class TestServiceContext : IDeviceContext
-    {
-        public void LoadFromJson(JToken token)
+        public double[] Array(int len)
         {
-
+            return new double[len];
         }
 
-        public IDevice NewInstance()
-        {
-            return new TestService();
-        }
     }
 }

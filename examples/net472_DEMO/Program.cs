@@ -14,21 +14,21 @@ namespace net472_DEMO
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("========================================================================================");
+            Console.WriteLine("== Welcome to MACOs.JY.ActorFramework example, there are 3 types of command supported ==");
+            Console.WriteLine("==      1. key in Q will leave the program                                            ==");
+            Console.WriteLine("==      2. key in any text except Q will immediate response                           ==");
+            Console.WriteLine("==      3. key in number will reponse the double array with the assigned size         ==");
+            Console.WriteLine("========================================================================================");
             TestService server = new TestService();
-            var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
-
+            var ip = "127.0.0.1";
             server.LoadDataBus(new NetMQDataBusContext()
             {
-                IPAddress = ip,
-                BeaconPort=9999,
-                Port=-1,
                 AliasName="DEMO",
             });
 
-            var clientConnInfo = new NetMQClientContext(9999, "DEMO", ip);
+            var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip };
             var client = clientConnInfo.Search();
-            var g = client.Query(new Command("Test"));
-            Console.WriteLine(g);
             var sw = new Stopwatch();
             while (true)
             {
@@ -64,18 +64,6 @@ namespace net472_DEMO
         }
     }
 
-
-    public class CommandDateTime<T1> : Command<T1>
-    {
-        public CommandDateTime(string name, T1 param1) : base(name, param1)
-        {
-        }
-
-        public override string ConvertToString(object obj)
-        {
-            return ((double[])obj).Length.ToString();
-        }
-    }
 
     public class TestService : DeviceBase
     {

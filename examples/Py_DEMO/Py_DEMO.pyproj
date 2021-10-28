@@ -2,15 +2,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>54381bb4-446d-420e-99c8-90aabd049430</ProjectGuid>
+    <ProjectGuid>7bf08701-c0df-4ad6-be15-3e5e9b4678fd</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>PyHAS_DEMO.py</StartupFile>
+    <StartupFile>Py_DEMO.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>PyHAS_DEMO</Name>
-    <RootNamespace>PyHAS_DEMO</RootNamespace>
+    <Name>Py_DEMO</Name>
+    <RootNamespace>Py_DEMO</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,10 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="PyHAS_DEMO.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="appsettings.json" />
+    <Compile Include="Py_DEMO.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

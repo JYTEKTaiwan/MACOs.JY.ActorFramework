@@ -40,15 +40,12 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         {
             _logger.Trace("New data event is triggered");
 
-            ICommand cmd;
-            object result;
-            string ans = "";
             //Convert to ICommand, execute, and convert the response to string
             try
             {
-                cmd = ConvertToCommand(args);
-                result = cmd.Execute();
-                ans = cmd.ConvertToString(result);
+                var cmd = ConvertToCommand(args);
+                var result = cmd.Execute();
+                var ans = cmd.ConvertToString(result);
                 _logger.Debug("ExecuteCompleteEvent is fired");
                 OnExecutionComplete?.Invoke(this, ans);
                 _logger.Debug($"Command is executed with result: {ans}");
@@ -97,6 +94,8 @@ namespace MACOs.JY.ActorFramework.Core.Devices
             {
                 _bus?.Kill();
                 _logger.Info("Object is successfully disposed");
+                GC.Collect();
+
             }
             catch (Exception ex)
             {

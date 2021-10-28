@@ -8,7 +8,7 @@
 		<OutputType>Library</OutputType>
 		<StartupObject />
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Version>3.0.3</Version>
+		<Version>3.1.1</Version>
 		<RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Core</RepositoryUrl>
 		<Copyright>JYTEK TAIWAN CORP.</Copyright>
 		<Company>JYTEK TAIWAN CORP.</Company>
@@ -20,6 +20,7 @@
 		<PackageTags>C#, Actor Framework</PackageTags>
 		<PackageReleaseNotes>20211006 v3.0 kickoff</PackageReleaseNotes>
 		<PackageProjectUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src</PackageProjectUrl>
+		<PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
 	</PropertyGroup>
 
 	<ItemGroup>

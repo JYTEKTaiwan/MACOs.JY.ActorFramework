@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MACOs.JY.ActorFramework.Implement.NetMQ" Version="1.0.1" />
+    <PackageReference Include="MACOs.JY.ActorFramework.Implement.NetMQ" Version="1.1.1" />
   </ItemGroup>
 
 </Project>

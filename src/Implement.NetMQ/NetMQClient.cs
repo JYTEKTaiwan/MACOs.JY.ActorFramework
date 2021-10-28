@@ -103,6 +103,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     }
 
                 }
+                GC.Collect();
+
 
             }
             catch (Exception ex)
