@@ -129,6 +129,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             try
             {
                 _serverSocket = new RouterSocket();
+                //disable reconnect function
+                _serverSocket.Options.ReconnectInterval = TimeSpan.FromMilliseconds(-1);
                 
             }
             catch (Exception ex)
@@ -224,6 +226,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// </summary>
         private void Socket_Events(object sender, NetMQMonitorEventArgs e)
         {
+            _logger.Debug(e.SocketEvent + "@" + e.Address);
             switch (e.SocketEvent)
             {
                 case SocketEvents.Connected:

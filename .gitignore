@@ -342,3 +342,5 @@ healthchecksdb
 /UnitTest_472
 /HandshakeTest
 /documents/nuget key.txt
+/ConnectionTest
+/examples/Server/Server

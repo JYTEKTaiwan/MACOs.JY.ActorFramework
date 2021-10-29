@@ -21,7 +21,8 @@ namespace net472_DEMO
             Console.WriteLine("==      3. key in number will reponse the double array with the assigned size         ==");
             Console.WriteLine("========================================================================================");
             TestService server = new TestService();
-            var ip = "127.0.0.1";
+            var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
+            //var ip = "127.0.0.1";
             server.LoadDataBus(new NetMQDataBusContext()
             {
                 AliasName="DEMO",

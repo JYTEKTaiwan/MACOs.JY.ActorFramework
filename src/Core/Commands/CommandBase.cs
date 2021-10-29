@@ -30,7 +30,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         protected CommandBase()
         {
-        }
+        }       
 
         public abstract object Execute();
         public string DefaultConvertString(object obj)

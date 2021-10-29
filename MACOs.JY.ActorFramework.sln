@@ -40,6 +40,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "net472_UnitTest", "unit tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestService", "examples\Lv_DEMO\TestService\TestService.csproj", "{2A67A09A-C93C-48F4-83AA-E1FA5037DE09}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "examples\Server\Server\Server.csproj", "{23F7BD9C-25FE-4D3D-9411-687DCAEFF7C7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectionTest", "ConnectionTest\ConnectionTest.csproj", "{70BD74C4-ADB3-4AA0-B108-20445AB98614}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -76,6 +80,14 @@ Global
 		{2A67A09A-C93C-48F4-83AA-E1FA5037DE09}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A67A09A-C93C-48F4-83AA-E1FA5037DE09}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A67A09A-C93C-48F4-83AA-E1FA5037DE09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23F7BD9C-25FE-4D3D-9411-687DCAEFF7C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23F7BD9C-25FE-4D3D-9411-687DCAEFF7C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23F7BD9C-25FE-4D3D-9411-687DCAEFF7C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23F7BD9C-25FE-4D3D-9411-687DCAEFF7C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70BD74C4-ADB3-4AA0-B108-20445AB98614}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70BD74C4-ADB3-4AA0-B108-20445AB98614}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70BD74C4-ADB3-4AA0-B108-20445AB98614}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70BD74C4-ADB3-4AA0-B108-20445AB98614}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -90,9 +102,10 @@ Global
 		{7BF08701-C0DF-4AD6-BE15-3E5E9B4678FD} = {F81F1D1B-5363-4616-831C-746E1BF19A15}
 		{212E65E8-A3A1-4D60-8730-6F25F77E0CBB} = {798B5413-F144-4AC8-830B-3543F48A5D2C}
 		{2A67A09A-C93C-48F4-83AA-E1FA5037DE09} = {1A727768-7C56-43D9-84A5-226F7AF3C742}
+		{23F7BD9C-25FE-4D3D-9411-687DCAEFF7C7} = {F81F1D1B-5363-4616-831C-746E1BF19A15}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		BuildVersion_StartDate = 2000/1/1
 		SolutionGuid = {32B03236-DABD-45EA-84ED-C27B760D41A3}
+		BuildVersion_StartDate = 2000/1/1
 	EndGlobalSection
 EndGlobal
