@@ -21,7 +21,8 @@ namespace net50_DEMO
             Console.WriteLine("==      3. key in number will reponse the double array with the assigned size         ==");
             Console.WriteLine("========================================================================================");
             TestService server = new TestService();
-            var ip = "127.0.0.1";
+            var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
+            //var ip = "127.0.0.1";
             server.LoadDataBus(new NetMQDataBusContext()
             {
                 AliasName = "DEMO",
@@ -30,6 +31,8 @@ namespace net50_DEMO
             var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip };
             var client = clientConnInfo.Search();
             var sw = new Stopwatch();
+
+
             while (true)
             {
                 Console.Write("Enter Command: ");
@@ -42,29 +45,52 @@ namespace net50_DEMO
                 else if (int.TryParse(str, out len))
                 {
                     var data = new double[len];
-                    var res = server.ExecuteCommand(server.QueryCommand.Generate(data));
+                    var res = client.Query(server.QueryCommand.Generate(data));
                     sw.Restart();
-                    res = server.ExecuteCommand(server.QueryCommand.Generate(data));
+                    res = client.Query(server.QueryCommand.Generate(data));
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
                     Console.WriteLine();
                 }
+                else if (str == "Now")
+                {
+                    sw.Restart();
+                    var res = client.Query(new DateTimeCommand("Now"));
+                    var elapsed = sw.ElapsedMilliseconds;
+                    Console.WriteLine(res);
+                    Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
+                    Console.WriteLine();
+
+                }
                 else
                 {
                     sw.Restart();
-                    var res = server.ExecuteCommand(new Command<string>("WalkyTalky", str));
+                    CommandBase cmd = CommandBase.Create("WalkyTalky", str);
+                    var res = client.Query(cmd);
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
                     Console.WriteLine();
                 }
             }
+
+            client.Dispose();
             server.Dispose();
         }
     }
 
+    public class DateTimeCommand : Command
+    {
+        public DateTimeCommand(string name) : base(name)
+        {
+        }
 
+        public override string ConvertToString(object obj)
+        {
+            return ((DateTime)obj).ToString("HH:mm:ss.fff");
+        }
+    }
     public class TestService : DeviceBase
     {
         public Command<string> TestCommand { get; } = new Command<string>("WalkyTalky", null);
@@ -90,6 +116,7 @@ namespace net50_DEMO
         {
             return new double[len];
         }
-
+        public DateTime Now()
+        { return DateTime.Now; }
     }
 }

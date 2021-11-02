@@ -1,4 +1,4 @@
-﻿    using MACOs.JY.ActorFramework.Core.Commands;
+﻿using MACOs.JY.ActorFramework.Core.Commands;
 using MACOs.JY.ActorFramework.Core.Devices;
 using MACOs.JY.ActorFramework.Implement.NetMQ;
 using Newtonsoft.Json;
@@ -45,9 +45,9 @@ namespace net472_DEMO
                 else if (int.TryParse(str, out len))
                 {
                     var data = new double[len];
-                    var res=server.ExecuteCommand(server.QueryCommand.Generate(data));
+                    var res=client.Query(server.QueryCommand.Generate(data));
                     sw.Restart();
-                    res = server.ExecuteCommand(server.QueryCommand.Generate(data));
+                    res = client.Query(server.QueryCommand.Generate(data));
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
@@ -56,7 +56,7 @@ namespace net472_DEMO
                 else if (str=="Now")
                 {
                     sw.Restart();
-                    var res = server.ExecuteCommand(new DateTimeCommand("Now"));
+                    var res = client.Query(new DateTimeCommand("Now"));
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
@@ -66,7 +66,8 @@ namespace net472_DEMO
                 else
                 {
                     sw.Restart();
-                    var res = server.ExecuteCommand(new Command<string>("WalkyTalky", str));
+                    CommandBase cmd = CommandBase.Create("WalkyTalky", str);
+                    var res = client.Query(cmd);
                     var elapsed = sw.ElapsedMilliseconds;
                     Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");

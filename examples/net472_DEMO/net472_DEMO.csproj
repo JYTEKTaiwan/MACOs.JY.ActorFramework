@@ -36,14 +36,14 @@
     <Reference Include="AsyncIO, Version=0.1.69.0, Culture=neutral, PublicKeyToken=44a94435bd6f33f8, processorArchitecture=MSIL">
       <HintPath>..\..\packages\AsyncIO.0.1.69\lib\net40\AsyncIO.dll</HintPath>
     </Reference>
-    <Reference Include="MACOs.JY.ActorFramework.Clients, Version=1.1.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\MACOs.JY.ActorFramework.Clients.1.1.1\lib\net472\MACOs.JY.ActorFramework.Clients.dll</HintPath>
+    <Reference Include="MACOs.JY.ActorFramework.Clients, Version=1.1.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\MACOs.JY.ActorFramework.Clients.1.1.2\lib\net472\MACOs.JY.ActorFramework.Clients.dll</HintPath>
     </Reference>
-    <Reference Include="MACOs.JY.ActorFramework.Core, Version=3.1.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\MACOs.JY.ActorFramework.Core.3.1.1\lib\net472\MACOs.JY.ActorFramework.Core.dll</HintPath>
+    <Reference Include="MACOs.JY.ActorFramework.Core, Version=3.1.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\MACOs.JY.ActorFramework.Core.3.1.2\lib\net472\MACOs.JY.ActorFramework.Core.dll</HintPath>
     </Reference>
-    <Reference Include="MACOs.JY.ActorFramework.Implement.NetMQ, Version=1.1.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\MACOs.JY.ActorFramework.Implement.NetMQ.1.1.1\lib\net472\MACOs.JY.ActorFramework.Implement.NetMQ.dll</HintPath>
+    <Reference Include="MACOs.JY.ActorFramework.Implement.NetMQ, Version=1.1.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\MACOs.JY.ActorFramework.Implement.NetMQ.1.1.2\lib\net472\MACOs.JY.ActorFramework.Implement.NetMQ.dll</HintPath>
     </Reference>
     <Reference Include="NaCl, Version=0.1.13.0, Culture=neutral, PublicKeyToken=827c20e50a9775fa, processorArchitecture=MSIL">
       <HintPath>..\..\packages\NaCl.Net.0.1.13\lib\net472\NaCl.dll</HintPath>
@@ -55,7 +55,7 @@
       <HintPath>..\..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NLog.4.7.11\lib\net45\NLog.dll</HintPath>
+      <HintPath>..\..\packages\NLog.4.7.12\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
