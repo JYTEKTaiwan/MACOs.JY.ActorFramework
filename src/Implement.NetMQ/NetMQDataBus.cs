@@ -4,6 +4,7 @@ using MACOs.JY.ActorFramework.Core.Utilities;
 using NetMQ;
 using NetMQ.Monitoring;
 using NetMQ.Sockets;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Net;
 using System.Runtime.Serialization;
@@ -21,7 +22,6 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
     /// </summary>
     public class NetMQDataBus : IDataBus
     {
-        private NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
 
         // Two necessary socket in the object
         // 1. RouterSocket - handler different DealerSocket and send response back to each of them
@@ -29,14 +29,15 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         private NetMQSocket _serverSocket;
         private NetMQBeacon _beacon;
         // Multi-Thread support for NetMQ protocol
-        private NetMQPoller _poller;
-        private NetMQMonitor _monitor;
         private readonly NetMQDataBusContext _config;
+        private CancellationTokenSource cts_beaconListening;
+        private CancellationTokenSource cts_readMessage;
+        private NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
+
         public bool IsDisposed { get; set; } = false;
         public string Name { get; set; }
+        public TimeSpan Timeout { get; set; } = TimeSpan.FromMilliseconds(1000);
         public event DataReadyEvent OnDataReady;
-        private string connectedString = "";
-        private CancellationTokenSource cts;
 
         /// <summary>
         /// Constructor
@@ -49,23 +50,24 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             _logger.Info("Object is created");
         }
 
-        private void CurrentDomain_DomainUnload(object sender, EventArgs e)
+        #region Public Methods
+        public static void CleanUp(bool block = true)
         {
-            //this will close all netmq sockets in the background
-            NetMQConfig.Cleanup(false);
+            NetMQConfig.Cleanup(block);
         }
-
 
         /// <summary>
         /// Start
         /// </summary>
         public void Start()
         {
-            cts = new CancellationTokenSource();
-            WaitForConnection();
+            _logger.Trace("DataBus starts");
+            cts_beaconListening = new CancellationTokenSource();
+            cts_readMessage = new CancellationTokenSource();
 
-            _poller.RunAsync();
-            _logger.Info("Poller starts");
+            StartBeaconSubscriptionAsync();
+            ReadMessageAsync();
+            _logger.Info("DataBus start running");
         }
 
         /// <summary>
@@ -73,9 +75,10 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// </summary>
         public void Stop()
         {
-            cts.Cancel();
-            _poller.Stop();
-            _logger.Info("Poller stops");
+            _logger.Trace("DataBus stops");
+            cts_beaconListening?.Cancel();
+            cts_readMessage?.Cancel();
+            _logger.Info("DataBus stop running");
         }
         /// <summary>
         /// Configure
@@ -84,9 +87,10 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             try
             {
-                _logger.Trace("Begin configuration");
+                _logger.Trace("Start configuring databus object");
                 if (string.IsNullOrEmpty(_config.AliasName))
                 {
+                    _logger.Debug("Alias is null or empty, overwritten by has code");
                     Name = this.GetHashCode().ToString();
                 }
                 else
@@ -94,22 +98,11 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     Name = _config.AliasName;
                 }
 
-                RouterSocketConfig();
                 BeaconConfig();
 
-                _poller = new NetMQPoller();
-                _poller.Add(_serverSocket);
-                _poller.Add(_beacon);
+                RouterSocketConfig();
 
-                _monitor = new NetMQMonitor(_serverSocket, $"inproc://{_serverSocket.GetHashCode()}", SocketEvents.All);
-                _monitor.AttachToPoller(_poller);
-                _monitor.EventReceived += Socket_Events;
-
-
-                _serverSocket.ReceiveReady += _serverSocket_ReceiveReady;
-
-
-                _logger.Info("Configuration is done");
+                _logger.Info("Databus configuration is done");
 
             }
             catch (Exception ex)
@@ -118,20 +111,52 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 throw ex;
             }
         }
-
-
-        public static void CleanUp(bool block = true)
+        /// <summary>
+        /// Stop and release instance
+        /// </summary>
+        public void Dispose()
         {
-            NetMQConfig.Cleanup(block);
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+            if (disposing)
+            {
+                _logger.Trace("Begin disposing the object");
+                _logger.Debug("Stop and remove the socket and beacon");
+
+                Stop();
+
+                Thread.Sleep(Timeout);
+                _beacon?.Dispose();
+                _serverSocket?.Disconnect(_serverSocket.Options.LastEndpoint);
+                _serverSocket?.Dispose();
+                _logger.Info("Socket and beacon are removed and disposed");
+
+                IsDisposed = true;
+                _logger.Info("Object is successfully disposed");
+
+
+            }
+        }
+
+        #endregion
+
+        #region Private Methods
         private void RouterSocketConfig()
         {
             try
             {
+                _logger.Trace("Start configuring socket");
                 _serverSocket = new RouterSocket();
                 //disable reconnect function
                 _serverSocket.Options.ReconnectInterval = TimeSpan.FromMilliseconds(-1);
-                
+                _logger.Info("Socket configuration is done");
             }
             catch (Exception ex)
             {
@@ -140,11 +165,12 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
 
         }
-
         private void BeaconConfig()
         {
             try
             {
+                _logger.Trace("Start configuring beacon");
+
                 _beacon = new NetMQBeacon();
 
                 bool emptyIP = string.IsNullOrEmpty(_config.BeaconIP);
@@ -184,164 +210,133 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 //check if beacon is sucessfully bounded to endpoint
                 if (string.IsNullOrEmpty(_beacon.BoundTo))
                 {
-                    _beacon.Dispose();
-
                     throw new BeaconException($"Beacon binding failed: {_config.BeaconIP}");
                 }
+                _logger.Info("Beacon configuration is done");
             }
             catch (Exception ex)
             {
-                _beacon.Dispose();
+                LogError(ex);
+                _beacon?.Dispose();
                 throw ex;
             }
 
         }
-        private void WaitForConnection()
+        private void StartBeaconSubscriptionAsync()
         {
             Task.Run(() =>
             {
+                _logger.Trace($"Start waiting for the beacon named: {Name}");
                 _beacon.Subscribe(Name);
-                _logger.Debug($"Beacon listens at port {_config.BeaconPort}");
-
-                while (!cts.IsCancellationRequested)
+                _logger.Debug($"Beacon start listening at port {_config.BeaconPort}");
+                while (!cts_beaconListening.IsCancellationRequested)
                 {
                     BeaconMessage msg;
-                    if (_beacon.TryReceive(TimeSpan.FromMilliseconds(100), out msg))
+                    if (_beacon.TryReceive(Timeout, out msg))
                     {
-                        _beacon.Unsubscribe();
-                        _logger.Debug($"Beacon Received from {msg.PeerAddress}");
+                        //_beacon.Unsubscribe();
+                        _logger.Debug($"Beacon received from {msg.PeerAddress}");
                         //Check 
                         var info = msg.String.Split('>')[1];
+                        _logger.Debug($"Client info was extracted: {info}");
                         _serverSocket.Connect(info);
-                        _beacon.Subscribe(_config.AliasName);
-
+                        _logger.Debug($"Client is connected {info}");
                     }
                 }
             });
 
         }
-       
-        /// <summary>
-        /// TCP socket event handler
-        /// </summary>
-        private void Socket_Events(object sender, NetMQMonitorEventArgs e)
+        private void ReadMessageAsync()
         {
-            _logger.Debug(e.SocketEvent + "@" + e.Address);
-            switch (e.SocketEvent)
+            Task.Run(() =>
             {
-                case SocketEvents.Connected:
-
-                    break;
-                case SocketEvents.ConnectDelayed:
-                    break;
-                case SocketEvents.ConnectRetried:
-                    break;
-                case SocketEvents.Listening:
-                    break;
-                case SocketEvents.BindFailed:
-                    break;
-                case SocketEvents.Accepted:
-                    break;
-                case SocketEvents.AcceptFailed:
-                    break;
-                case SocketEvents.Closed:
-                    break;
-                case SocketEvents.CloseFailed:
-                    break;
-                case SocketEvents.Disconnected:
-                    break;
-                case SocketEvents.All:
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// New data is received from routersocket
-        /// </summary>
-        private void _serverSocket_ReceiveReady(object sender, NetMQSocketEventArgs e)
-        {            
-            if (e.IsReadyToReceive)
-            {
-                RoutingKey id;
+                RoutingKey id = new RoutingKey();
                 string ans = "";
-                try
+
+                while (!cts_readMessage.IsCancellationRequested)
                 {
-                    _logger.Trace("New data is coming");
-                    id = e.Socket.ReceiveRoutingKey();
-                    var content = e.Socket.ReceiveMultipartStrings();
-                    if (content[0]== GlobalCommand.Accepted)
+                    if (_serverSocket.TryReceiveRoutingKey(Timeout, ref id))
                     {
-                        _serverSocket.SendMoreFrame(id);
-                        _serverSocket.SendFrame(GlobalCommand.Connected);
-                        _beacon.Subscribe(_config.AliasName);
+                        var content = _serverSocket.ReceiveMultipartStrings()[0];
+                        if (content == GlobalCommand.Accepted)
+                        {
+                            _logger.Trace($"[{id}] \"{GlobalCommand.Accepted}\"");
+                            _logger.Debug($"\"{GlobalCommand.Accepted}\" is received");
+                            _logger.Info($"\"{GlobalCommand.Accepted}\" is received");
+
+                            _serverSocket.SendMoreFrame(id);
+                            _serverSocket.SendFrame(GlobalCommand.Connected);
+
+                            _logger.Trace($"\"{GlobalCommand.Connected}\" is sent back to {id}");
+                            _logger.Debug($"\"{GlobalCommand.Connected}\" is sent back");
+                            _logger.Info($"\"{GlobalCommand.Connected}\" is sent back");
+
+                            //_beacon.Subscribe(_config.AliasName);
+
+                        }
+                        else
+                        {
+                            JToken token = JToken.Parse(content);
+                            if (token["Parameter"] != null)
+                            {
+                                _logger.Trace($"[{id}] [{token["Name"]}: {token["Parameter"].ToString().Replace(Environment.NewLine, "")}");
+                                _logger.Debug($"[{token["Name"]}: {token["Parameter"].ToString().Replace(Environment.NewLine, "")}");
+
+                            }
+                            else
+                            {
+                                _logger.Trace($"[{id}] [{token["Name"]}");
+                                _logger.Debug($"[{token["Name"]}");
+
+                            }
+                            _logger.Info("New command is received");
+
+                            try
+                            {
+                                ans = OnDataReady?.Invoke(this, content);
+                                _logger.Info("Message has been processed");
+                                _logger.Debug($"Response after executiion: {ans}");
+                                _serverSocket.SendMoreFrame(id);
+                                _serverSocket.SendFrame(ans);
+                                _logger.Info("Response sent");
+
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error($"Invoke error: {ex.Message}");
+                                _serverSocket.SendMoreFrame(id);
+                                _serverSocket.SendFrame($"[Error]: {ex.Message}");
+                            }
+
+                        }
 
                     }
-                    else
-                    {
-                        _logger.Debug($"Content: {content[0]}");
-                        ans = OnDataReady?.Invoke(sender, content[0]);
-                        _logger.Debug("OnDataReady is fired");
-                        _logger.Debug($"Return data: {ans}");
-
-                        _serverSocket.SendMoreFrame(id);
-                        _serverSocket.SendFrame(ans);
-                        _logger.Info("Response sent");
-
-                    }
-
                 }
-                catch (Exception ex)
-                {
-                    _logger.Error($"Invoke error: {ex.Message}");
-                    _serverSocket.SendMoreFrame(id);
-                    _serverSocket.SendFrame($"[Error]: {ex.Message}");
-                }
-
-            }
+            });
+            
         }
-        /// <summary>
-        /// Stop and release instance
-        /// </summary>
-        public void Kill()
+        private void LogError(Exception ex)
         {
-            _logger.Trace("Begin disposing the object");
-
-            if (!IsDisposed)
-            {
-                if (_poller != null)
-                {
-                    if (_poller.IsRunning)
-                    {
-                        cts.Cancel();
-                        Thread.Sleep(100);
-
-                        _monitor.EventReceived -= Socket_Events;
-                        _serverSocket.ReceiveReady -= _serverSocket_ReceiveReady;
-
-                        Stop();
-                        _poller.RemoveAndDispose(_serverSocket);
-                        _poller.RemoveAndDispose(_beacon);
-                        _logger.Debug("Clear sockets in poller");
-
-                    }
-                    _monitor.DetachFromPoller();
-                    _monitor.Dispose();
-                    _poller.Dispose();
-                    _logger.Debug("Dispose poller");
-                    IsDisposed = true;
-                    _logger.Info("Object is successfully disposed");
-                    GC.Collect();
-
-                }
-
-            }
-
+            _logger.Error($"[{ex.Message}] {ex.StackTrace}");
         }
+
+        #endregion
+
+        #region Internal Event Handler
+        private void CurrentDomain_DomainUnload(object sender, EventArgs e)
+        {
+            _logger.Trace("Domain Unload");
+            Dispose();            
+            //this will close all netmq sockets in the background
+            NetMQConfig.Cleanup(false);
+        }
+
+
+        #endregion
 
         ~NetMQDataBus()
         {
+            Dispose(false);
         }
 
     }

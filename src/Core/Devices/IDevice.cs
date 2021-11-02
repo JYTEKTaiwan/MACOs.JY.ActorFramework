@@ -1,10 +1,11 @@
 ﻿using MACOs.JY.ActorFramework.Core.Commands;
 using MACOs.JY.ActorFramework.Core.DataBus;
 using MACOs.JY.ActorFramework.Core.Utilities;
+using System;
 
 namespace MACOs.JY.ActorFramework.Core.Devices
 {
-    public interface IDevice
+    public interface IDevice:IDisposable
     {
         string Name { get; set; }
         /// <summary>
@@ -32,6 +33,5 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         /// <summary>
         /// Kill and dispose the object
         /// </summary>
-        void Dispose();
     }
 }

@@ -7,19 +7,17 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
-    public class NetMQClient : IClient
+    public class NetMQClient : IClient, IDisposable
     {
         private Logger _logger = LogManager.GetCurrentClassLogger();
         private NetMQSocket _socket;
         private bool isDisposed = false;
-        private NetMQMonitor _monitor;
-        private bool isConnected = false;
         public delegate void SocketAccepted();
 
         public SocketAccepted SocketAccept;
@@ -29,43 +27,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
             _socket = new DealerSocket();
-            _monitor = new NetMQMonitor(_socket, "inproc://" + _socket.GetHashCode(), SocketEvents.All);
-            _monitor.EventReceived += SocketEvent;
-            _monitor.StartAsync();
-        }
-
-        private void SocketEvent(object sender, NetMQMonitorEventArgs e)
-        {
-            _logger.Trace(e.SocketEvent + "@" + e.Address);
-            switch (e.SocketEvent)
-            {
-                case SocketEvents.Connected:
-                    break;
-                case SocketEvents.ConnectDelayed:
-                    break;
-                case SocketEvents.ConnectRetried:
-                    break;
-                case SocketEvents.Listening:
-                    break;
-                case SocketEvents.BindFailed:
-                    break;
-                case SocketEvents.Accepted:
-                    isConnected = true;
-                    break;
-                case SocketEvents.AcceptFailed:
-                    break;
-                case SocketEvents.Closed:
-                    break;
-                case SocketEvents.CloseFailed:
-                    break;
-                case SocketEvents.Disconnected:
-                    isConnected = false;
-                    break;
-                case SocketEvents.All:
-                    break;
-                default:
-                    break;
-            }
+            _logger.Info($"Client {this.GetHashCode()} is created");
         }
 
         private void CurrentDomain_DomainUnload(object sender, EventArgs e)
@@ -106,7 +68,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             try
             {
                 _logger.Trace("Start unbinding the address");
-                _socket.Unbind(_socket.Options.LastEndpoint);
+                _socket.Unbind(EndPoint);
                 _logger.Info("Unbinding completed");
 
             }
@@ -124,6 +86,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             {
                 _logger.Trace("Start listening for connection");
                 bool passed = false;
+
                 if (_socket.TrySendFrame(TimeSpan.FromMilliseconds(timeoutMilliSecond), GlobalCommand.Accepted))
                 {
                     _logger.Debug($"Message \"ACCEPTED\" has been sent successfully");
@@ -136,14 +99,23 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     //Try Receive frame from router socket (eg: ACK)
                     string ans = "";
                     var success = _socket.TryReceiveFrameString(TimeSpan.FromMilliseconds(timeoutMilliSecond), out ans);
-                    _logger.Debug($"Message \"CONNECTED\" has been received successfully");
 
                     passed = success && ans == GlobalCommand.Connected;
+                    if (passed)
+                    {
+                        _logger.Debug($"Message \"CONNECTED\" has been received successfully");
+                    }
+                    else
+                    {
+                        _logger.Debug($"Message \"CONNECTED\" is not received.");
+                        throw new NetMQClientException("Connection is established, but ACK is not finished yet");
+                    }
+
                 }
                 else
                 {
                     _logger.Debug($"Message \"ACCEPTED\" has not been sent");
-                    passed = false;
+                    throw new NetMQClientException("Connection is not established yet");
                 }
 
                 _logger.Info($"Client search " + (passed ? "pass" : "fail"));
@@ -164,19 +136,23 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
                 lock (this)
                 {
-                    var msg = _socket.ReceiveMultipartStrings();                    
-                    if (!isConnected)
-                    {
-                        throw new NetMQClientException("Not connected");
-                    }
+                    List<string> msg = new List<string>();
 
-                    for (int i = 0; i < msg.Count; i++)
+                    var pass=_socket.TryReceiveMultipartStrings(Timeout, ref msg,4);
+                    if (pass)
                     {
-                        _logger.Debug($"Frame {i}: {msg[i]}");
+                        for (int i = 0; i < msg.Count; i++)
+                        {
+                            _logger.Debug($"Frame {i}: {msg[i]}");
+                        }
+                        var returnVal = msg[0];
+                        _logger.Info("Message has been received");
+                        return returnVal;
                     }
-                    var returnVal = msg[0];
-                    _logger.Info("Message has been received");
-                    return returnVal;
+                    else
+                    {
+                        throw new NetMQClientException("Receiving message timeout");
+                    }
                 }
 
             }
@@ -191,31 +167,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             try
             {
-                _logger.Trace("Start disposing client object");
-
-                _logger.Debug("Stops the monitor task");
-                _monitor.Stop();
-
-                _logger.Debug("Dispose the socket");
-                if (!isDisposed)
-                {
-                    if (_socket != null && !_socket.IsDisposed)
-                    {
-                        try
-                        {
-                            UnBind();
-                        }
-                        catch (Exception) { }
-
-                        //_socket?.Close();
-                        _socket?.Dispose();
-                        isDisposed = true;
-                    }
-
-                }
-                GC.Collect();
-                _logger.Info("client object disposed");
-
+                Dispose(true);
+                GC.SuppressFinalize(this);
             }
             catch (Exception ex)
             {
@@ -224,6 +177,40 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+            if (disposing)
+
+            {
+                _logger.Trace("Start disposing client object");
+
+                if (_socket != null && !_socket.IsDisposed)
+                {
+                    try
+                    {
+                        UnBind();
+                    }
+                    catch (Exception) { }
+
+
+                    //_socket?.Close();
+                    _socket?.Dispose();
+                    _socket = null;
+                    _logger.Debug("Dispose the socket");
+
+                }
+
+                isDisposed = true;
+
+
+                _logger.Info("client object disposed");
+
+            }
+        }
         public void Send(ICommand cmd)
         {
             try
@@ -232,17 +219,18 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
                 lock (this)
                 {
-                    var msg = JsonConvert.SerializeObject(cmd);
-                    JToken token = JToken.Parse(msg);
-                    _logger.Debug($"[{cmd.Name}]{token["Parameter"].ToString().Replace(Environment.NewLine,"")}");
-                    
-                    if (!isConnected)
+                    _logger.Debug((cmd as CommandBase).String);
+
+                    var pass = _socket.TrySendFrame(Timeout, JsonConvert.SerializeObject(cmd));
+                    if (pass)
                     {
-                        throw new NetMQClientException("Not connected");
+                        _logger.Info("Message has been sent");
+                    }
+                    else
+                    {
+                        throw new NetMQClientException($"Sending message timeout");
                     }
 
-                    var pass =_socket.TrySendFrame(Timeout, JsonConvert.SerializeObject(cmd));
-                    _logger.Info("Message has been sent");
                 }
             }
             catch (Exception ex)
@@ -270,7 +258,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                         throw new Exception(res);
                     }
                     else
-                    {                        
+                    {
                         _logger.Info("Query completed");
                         return res;
                     }
@@ -288,7 +276,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         ~NetMQClient()
         {
-            Dispose();
+            Dispose(false);
         }
 
         private void LogError(Exception ex)

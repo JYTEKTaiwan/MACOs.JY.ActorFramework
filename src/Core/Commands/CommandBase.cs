@@ -15,11 +15,13 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
     public abstract class CommandBase : ICommand
     {
+
         public BindingFlags flags { get; } = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
         public IDevice Instance { get; set; }
         public string Name { get; }
         public Type Type { get; }
         public Type[] ParameterTypes { get; set; }
+        public string String { get; protected set; }
         public CommandBase(string name)
         {
             Name = name;
@@ -84,8 +86,10 @@ namespace MACOs.JY.ActorFramework.Core.Commands
     }
     public class Command : CommandBase
     {
+
         public Command(string name) : base(name)
         {
+            String = $"[{name}]:";
 
         }
 
@@ -122,6 +126,8 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1) : base(name)
         {
             Parameter = new Tuple<T1>(param1);
+            String = $"[{name}]: {param1}";
+
         }
         public override object Execute()
         {
@@ -151,6 +157,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2) : base(name)
         {
             Parameter = new Tuple<T1, T2>(param1, param2);
+            String = $"[{name}]: {param1},{param2}";
 
         }
 
@@ -186,7 +193,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3>(param1, param2, param3);
-
+            String = $"[{name}]: {param1},{param2},{param3}";
 
         }
 
@@ -224,6 +231,8 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3, T4 param4) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3, T4>(param1, param2, param3, param4);
+            String = $"[{name}]: {param1},{param2},{param3},{param4}";
+
         }
 
         public override object Execute()
@@ -263,6 +272,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3, T4, T5>(param1, param2, param3, param4, param5);
+            String = $"[{name}]: {param1},{param2},{param3},{param4},{param5}";
 
         }
 
@@ -304,6 +314,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3, T4, T5, T6>(param1, param2, param3, param4, param5, param6);
+            String = $"[{name}]: {param1},{param2},{param3},{param4},{param5},{param6}";
 
         }
 
@@ -339,12 +350,11 @@ namespace MACOs.JY.ActorFramework.Core.Commands
     }
     public class Command<T1, T2, T3, T4, T5, T6, T7> : CommandBase
     {
-
         public Tuple<T1, T2, T3, T4, T5, T6, T7> Parameter { get; set; }
         public Command(string name, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6, T7 param7) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3, T4, T5, T6, T7>(param1, param2, param3, param4, param5, param6, param7);
-
+            String = $"[{name}]: {param1},{param2},{param3},{param4},{param5},{param6},{param7}";
         }
 
         public override object Execute()

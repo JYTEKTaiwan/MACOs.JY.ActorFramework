@@ -1,8 +1,9 @@
 ﻿using MACOs.JY.ActorFramework.Core.Utilities;
+using System;
 
 namespace MACOs.JY.ActorFramework.Core.DataBus
 {
-    public interface IDataBus
+    public interface IDataBus:IDisposable
     {
         string Name { get; set; }
         /// <summary>
@@ -26,10 +27,6 @@ namespace MACOs.JY.ActorFramework.Core.DataBus
         /// Stop
         /// </summary>
         void Stop();
-        /// <summary>
-        /// Stop (if running) and release the instance
-        /// </summary>
-        void Kill();
 
     }
 }

@@ -19,7 +19,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         
         private Logger _logger = LogManager.GetCurrentClassLogger();
         private IDataBus _bus;
-
+        private bool isDisposed = false;
         public string Name { get; set; }
         public string ConnectionInfo { get; set; }
         /// <summary>
@@ -28,8 +28,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         public event ExecuteCompleteEvent OnExecutionComplete;
         public DeviceBase()
         {
-            _logger.Trace("Begin ctor");
-            _logger.Debug("Query supported methods");
+            _logger.Trace("Begin creaeting DeviceBase object");
             _logger.Info("Object is created");
 
         }
@@ -38,23 +37,27 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         /// </summary>
         private string Bus_OnDataReady(object sender, object args)
         {
-            _logger.Trace("New data event is triggered");
-
             //Convert to ICommand, execute, and convert the response to string
             try
             {
+                _logger.Trace("New command is received");
+
                 var cmd = ConvertToCommand(args);
+
+                _logger.Trace("Start executing the command and converting the response into string");
                 var result = cmd.Execute();
                 var ans = cmd.ConvertToString(result);
-                _logger.Debug("ExecuteCompleteEvent is fired");
-                OnExecutionComplete?.Invoke(this, ans);
                 _logger.Debug($"Command is executed with result: {ans}");
-                _logger.Info($"Command is executed ");
+                _logger.Info($"Command is received and executed ");
+
+                _logger.Debug("Firing OnExecutionComplete event");
+                OnExecutionComplete?.Invoke(this, ans);
+
                 return ans;
             }
             catch (CommandNotFoundException ex)
             {
-                _logger.Error("Command is not found");
+                LogError(ex);
                 throw ex;
             }
             catch (Exception ex)
@@ -75,16 +78,19 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         {
             try
             {
+                _logger.Trace("Start converting to ICommand");
                 var str = msg.ToString();
                 JToken token = JToken.Parse(str);
                 Type t = token["Type"].ToObject<Type>();
                 var cmd = JsonConvert.DeserializeObject(str, t) as ICommand;
                 cmd.Instance = this;
-                _logger.Debug($"Convert to ICommand");
+                _logger.Debug((cmd as CommandBase).String);
+                _logger.Info($"Command is converted successfully");
                 return cmd;
             }
             catch (Exception ex)
             {
+                LogError(ex);
                 throw ex;
             }
         }
@@ -92,14 +98,28 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         {
             try
             {
-                _bus?.Kill();
-                _logger.Info("Object is successfully disposed");
-                GC.Collect();
-
+                Dispose(true);
+                GC.SuppressFinalize(this);
             }
             catch (Exception ex)
             {
                 throw ex;
+            }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+            if (disposing)
+            {
+                _logger.Trace("Start disposing the object");
+                _bus?.Dispose();
+                _logger.Info("Object is successfully disposed");
+
+                isDisposed = true;
             }
         }
         /// <summary>
@@ -110,16 +130,18 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         {
             try
             {
-                _logger.Debug("Load databus from context");
+                _logger.Debug("Start loading databus from context");
                 _bus = databusContext.NewInstance();
                 _bus.Configure();
                 Name = _bus.Name;
                 _bus.OnDataReady += Bus_OnDataReady;
                 _bus.Start();
-                _logger.Debug("Databus starts");
+                _logger.Info("Databus is loaded and starts");
             }
             catch (Exception ex)
             {
+                _bus?.Dispose();
+                LogError(ex);
                 throw ex;
             }
 
@@ -133,13 +155,13 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         {
             try
             {
-                _logger.Debug("Load databus from instance");
+                _logger.Debug("Load databus from IDataBus object");
                 _bus = databus;
                 _bus.Configure();
                 Name = _bus.Name;
                 _bus.OnDataReady += Bus_OnDataReady;
                 _bus.Start();
-                _logger.Debug("Databus starts");
+                _logger.Info("Databus is loaded and starts");
 
             }
             catch (Exception ex)
@@ -150,6 +172,12 @@ namespace MACOs.JY.ActorFramework.Core.Devices
 
         ~DeviceBase()
         {
+            Dispose(false);
         }
+        private void LogError(Exception ex)
+        {
+            _logger.Error($"[{ex.Message}] {ex.StackTrace}");
+        }
+
     }
 }

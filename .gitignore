@@ -344,3 +344,5 @@ healthchecksdb
 /documents/nuget key.txt
 /ConnectionTest
 /examples/Server/Server
+/NetMQRawTest
+/unit test/net472_UnitTest/NLog.config

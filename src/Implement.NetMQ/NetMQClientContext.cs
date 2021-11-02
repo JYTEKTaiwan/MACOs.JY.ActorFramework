@@ -19,9 +19,11 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
     /// Context that is used to automatically create NetMQClient object
     /// </summary>
     [Serializable]
-    public class NetMQClientContext : IClientContext
+    public class NetMQClientContext : IClientContext,IDisposable
     {
+        private NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
         private NetMQBeacon _beacon;
+        private bool isDisposed = false;
         /// <summary>
         /// Beacon will be published through this port. Default is 9999
         /// </summary>
@@ -47,12 +49,14 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// DealerSocket will be listening on thie ip address. Defult value is first IPV.4 ip address
         /// </summary>
         public string ListeningIP { get; set; }= Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
-
+        public int Timeout { get; set; } = 5000;
         public NetMQClientContext(string targetAlias, int beaconPort=9999, string beaconIp="" )
         {
+            _logger.Trace("Start creating object");
             BeaconPort = beaconPort;
             TargetAlias = targetAlias;
             BeaconIP = beaconIp;
+            _logger.Info("Object is created successfully");
         }
         public IClient Search()
         {
@@ -61,16 +65,13 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             bool res = false;
             try
             {
+                _logger.Trace("Start searching the peer");
                 if (string.IsNullOrEmpty(TargetAlias))
                 {
                     throw new NetMQClientException("Target alias cannot be empty");
                 }
                 client = new NetMQClient();
                 BeaconConfig();
-
-                var _logger = NLog.LogManager.GetCurrentClassLogger();
-                _logger.Trace("Start searching designated peer");
-
                 client.Bind(Type + "://" + ListeningIP, ListeningPort);
                 client.SocketAccept = () =>
                 {
@@ -78,7 +79,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     _beacon.Silence();
                 };
                 _beacon.Publish(TargetAlias + ">" + client.EndPoint);
-                res = client.StartListening(5000);
+                res = client.StartListening(Timeout);
                 client.SocketAccept = null;
                 _beacon.Silence();
                 _beacon.Dispose();
@@ -101,16 +102,37 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
             catch (Exception ex)
             {
+                LogError(ex);
+                _beacon?.Dispose();
                 client?.Dispose();
-                client = null;
                 throw ex;
             }
         }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        ~NetMQClientContext()
+        { Dispose(false); }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+            if (disposing)
+            {
+                _beacon?.Dispose();
+                isDisposed = true;
+            }
+        }
         private void BeaconConfig()
         {
             try
             {
+                _logger.Trace("Start configuring beacon");
                 _beacon = new NetMQBeacon();
 
                 bool emptyIP = string.IsNullOrEmpty(BeaconIP);
@@ -150,19 +172,25 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 //check if beacon is sucessfully bounded to endpoint
                 if (string.IsNullOrEmpty(_beacon.BoundTo))
                 {
-                    _beacon.Dispose();
-
                     throw new BeaconException($"Beacon binding failed: {BeaconIP}");
                 }
+                _logger.Info("Beacon configuration is done");
+
             }
             catch (Exception ex)
             {
-                _beacon.Dispose();
+                LogError(ex);
+                _beacon?.Silence();
+                _beacon?.Dispose();
                 throw ex;
             }
 
         }
 
+        private void LogError(Exception ex)
+        {
+            _logger.Error($"[{ex.Message}] {ex.StackTrace}");
+        }
 
 
     }

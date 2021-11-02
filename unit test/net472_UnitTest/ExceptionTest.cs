@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Threading.Channels;
+using System.Windows.Forms;
 
 namespace net472_UnitTest
 {
@@ -19,7 +20,7 @@ namespace net472_UnitTest
     public class ServerExceptionTest
     {
         [TestMethod]
-        public void DatabusNotLoaded()
+        public void RunWithoutDatabusLoaded()
         {
             var svrc = new TestService();
             string response;
@@ -155,40 +156,38 @@ namespace net472_UnitTest
     }
 
     [TestClass]
-    public class ClientExceptionTest
+    public class ClientContextExceptionTest
     {
-        private TestService svrc;
+        private static  TestService svrc;
         private string ip;
+
         [ClassInitialize]
         public static void GlobalSetup(TestContext context)
         {
+            NetMQDataBus.CleanUp(false);
+            svrc = new TestService();
+            svrc.LoadDataBus(new NetMQDataBusContext()
+            {
+                AliasName = "Test",
+            }); ;
+
         }
         [ClassCleanup]
         public static void Cleanup()
         {
+            svrc.Dispose();
+            NetMQDataBus.CleanUp(true);
+
         }
         [TestInitialize]
         public void Initialize()
         {
-            NetMQDataBus.CleanUp(true);
             ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
-
-            svrc = new TestService();
-            svrc.LoadDataBus(new NetMQDataBusContext()
-            {
-                BeaconIP=ip,
-                AliasName = "Test"
-            });
-
-
         }
 
         [TestCleanup]
         public void TearDown()
         {
-            svrc.Dispose();
-            svrc = null;
-            NetMQDataBus.CleanUp(false);
 
         }
 
@@ -264,41 +263,37 @@ namespace net472_UnitTest
     [TestClass]
     public class ClientCommunicationTest
     {
-        private TestService svrc;
+        public TestContext TestContext { get; set; }
+        private static TestService svrc;
         private string ip;
         [ClassInitialize]
         public static void GlobalSetup(TestContext context)
         {
-            NetMQDataBus.CleanUp(true);
+            NetMQDataBus.CleanUp(false);
+            svrc = new TestService();
+            svrc.LoadDataBus(new NetMQDataBusContext()
+            {
+                AliasName = "Test",
+            }); ;
 
         }
         [ClassCleanup]
         public static void Cleanup()
         {
-            NetMQDataBus.CleanUp(false);
+            svrc.Dispose();
+            NetMQDataBus.CleanUp(true);
 
         }
         [TestInitialize]
         public void Initialize()
         {
-            NetMQDataBus.CleanUp(true);
             ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
-            svrc = new TestService();
-            svrc.LoadDataBus(new NetMQDataBusContext()
-            {
-                BeaconIP=ip,
-                AliasName = "Test",
-            }); ;
-
-
         }
 
         [TestCleanup]
         public void TearDown()
         {
-            svrc.Dispose();
-            svrc = null;
-            NetMQDataBus.CleanUp(false);
+
         }
 
         [TestMethod]
@@ -309,7 +304,7 @@ namespace net472_UnitTest
             {
                 Assert.ThrowsException<Exception>(new Action(() =>
                 {
-                    client = new NetMQClientContext("Test",9999,ip) { ListeningIP = "127.0.0.1" }.Search();
+                    client = new NetMQClientContext("Test") { ListeningIP=ip}.Search();
                     var ans = client.Query(new Command("Heo"));
 
                 }));
@@ -334,7 +329,7 @@ namespace net472_UnitTest
             {
                 var a = Assert.ThrowsException<Exception>(new Action(() =>
                 {
-                    client = new NetMQClientContext("Test",9999, ip).Search();
+                    client = new NetMQClientContext("Test") { ListeningIP = ip }.Search();
                     client.Query(new Command<double, string, string, float>("WalkyTalky", 0, "", "", 0));
 
                 }));
@@ -359,7 +354,7 @@ namespace net472_UnitTest
 
             try
             {
-                client = new NetMQClientContext( "Test", 9999,ip).Search();
+                client = new NetMQClientContext("Test") { ListeningIP = ip }.Search();
                 var ans = client.Query(TestService.NotReturnCommand);
                 Assert.IsTrue(string.IsNullOrEmpty(ans));
             }
@@ -385,7 +380,7 @@ namespace net472_UnitTest
             {
                 Assert.ThrowsException<Exception>(new Action(() =>
                 {
-                    client = new NetMQClientContext("Test",9999,ip).Search();
+                    client = new NetMQClientContext("Test") { ListeningIP = ip }.Search();
                     var ans = client.Query(new Command("ThrowException"));
                 }));
             }
@@ -407,9 +402,9 @@ namespace net472_UnitTest
             IClient client2 = null;
             try
             {
-                client = new NetMQClientContext("Test",9999,ip).Search();
-                Thread.Sleep(10);
-                client2 = new NetMQClientContext("Test",9999,ip).Search();
+                client = new NetMQClientContext("Test") { ListeningIP = ip, ListeningPort = 1234 }.Search();
+                Thread.Sleep(100);
+                client2 = new NetMQClientContext("Test") { ListeningIP = ip,ListeningPort=5678 }.Search();
                 string ans = "";
                 var t = Task.Run(() => { ans = client.Query(TestService.SaySomething.Generate("1")); });
                 var ans2 = client2.Query(TestService.SaySomething.Generate("2"));
@@ -435,7 +430,7 @@ namespace net472_UnitTest
             IClient client = null;
             try
             {
-                client = new NetMQClientContext("Test",9999,ip).Search();
+                client = new NetMQClientContext("Test") { ListeningIP = ip }.Search();
 
                 SemaphoreSlim _pool = new SemaphoreSlim(10, 10);
                 Task<string>[] tasks = new Task<string>[10];
@@ -446,8 +441,7 @@ namespace net472_UnitTest
                 {
                     Random rand = new Random();
                     tasks[i] = Task.Run(() =>
-                    {
-                        
+                    {                        
                         _pool.Wait();
                         int padding = Interlocked.Add(ref _padding, 1);
                         var value = padding.ToString();
@@ -477,7 +471,6 @@ namespace net472_UnitTest
             {
                 client?.Dispose();
             }
-            client.Dispose();
         }
         [TestMethod]
         public void ReconnectTest()
@@ -485,27 +478,25 @@ namespace net472_UnitTest
             IClient client = null;
             try
             {
-                client = new NetMQClientContext("Test",9999,ip).Search();
+                client = new NetMQClientContext("Test") { ListeningIP = ip }.Search();
                 var ans = client.Query(TestService.SaySomething.Generate("A"));                                 
                 bool check = ans=="A";
                 client.Dispose();
                 client = null;
                 Thread.Sleep(100);
-                client= new NetMQClientContext("Test",9999,ip).Search();
+                client = new NetMQClientContext("Test") { ListeningIP = ip }.Search();
                 ans = client.Query(TestService.SaySomething.Generate("B"));
                 check = check && ans == "B";
                 Assert.IsTrue(check);
             }
             catch (Exception)
             {
-
                 throw;
             }
             finally
             {
                 client?.Dispose();
             }
-            client.Dispose();
         }
 
         public class TestService : DeviceBase
