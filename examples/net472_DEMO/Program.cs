@@ -24,11 +24,11 @@ namespace net472_DEMO
             var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
             //var ip = "127.0.0.1";
             server.LoadDataBus(new NetMQDataBusContext()
-            {
+            {                
                 AliasName="DEMO",
             });
 
-            var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip };
+            var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip, ListeningPort = 1234 };
             var client = clientConnInfo.Search();
             var sw = new Stopwatch();
 
@@ -93,10 +93,12 @@ namespace net472_DEMO
     }
     public class TestService : DeviceBase
     {
+        public Command<int> NumberCommand { get; set; } = new Command<int>("Number", 5);
         public Command<string> TestCommand { get; } = new Command<string>("WalkyTalky", null);
         public Command<double[]> QueryCommand { get; } = new Command<double[]>("ArrayData", null);
         public Command Command { get; } = new Command("Test");
-        public string Test()
+
+        public static string Test()
         {
             return "Done";
         }
@@ -118,5 +120,10 @@ namespace net472_DEMO
         }
         public DateTime Now()
         { return DateTime.Now; }
+
+        public string Number(int x)
+        {
+            return x.ToString();
+        }
     }
 }

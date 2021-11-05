@@ -4,9 +4,9 @@ namespace MACOs.JY.ActorFramework.Clients
 {
     public interface IClient
     {
-        void Send(ICommand cmd);
-        string Receive();
-        string Query(ICommand cmd);
+        void Send(ICommand cmd, int timeoutMilliSecond=-1);
+        string Receive( int timeoutMilliSecond=-1);
+        string Query(ICommand cmd, int timeoutMilliSecond=-1);
         void Dispose();
     }
 }

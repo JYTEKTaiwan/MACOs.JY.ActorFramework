@@ -74,6 +74,7 @@ JYTEK provides "CommandBase" abstract class, user can create the command object 
 This is being done by NetMQ implementaion class, which makes your object online
 
 ```C#
+var str = Console.ReadLine();
 //Create command object with the name and parameters
 CommandBase cmd = CommandBase.Create("WalkyTalky", str);
 //Call the ExecuteCommand and get the response

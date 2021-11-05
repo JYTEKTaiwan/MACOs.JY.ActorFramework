@@ -44,8 +44,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "examples\Server\S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectionTest", "ConnectionTest\ConnectionTest.csproj", "{70BD74C4-ADB3-4AA0-B108-20445AB98614}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetMQRawTest", "NetMQRawTest\NetMQRawTest.csproj", "{08F62908-3332-4068-B16B-03328E91176A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -90,10 +88,6 @@ Global
 		{70BD74C4-ADB3-4AA0-B108-20445AB98614}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{70BD74C4-ADB3-4AA0-B108-20445AB98614}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{70BD74C4-ADB3-4AA0-B108-20445AB98614}.Release|Any CPU.Build.0 = Release|Any CPU
-		{08F62908-3332-4068-B16B-03328E91176A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{08F62908-3332-4068-B16B-03328E91176A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{08F62908-3332-4068-B16B-03328E91176A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{08F62908-3332-4068-B16B-03328E91176A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -111,7 +105,7 @@ Global
 		{23F7BD9C-25FE-4D3D-9411-687DCAEFF7C7} = {F81F1D1B-5363-4616-831C-746E1BF19A15}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		BuildVersion_StartDate = 2000/1/1
 		SolutionGuid = {32B03236-DABD-45EA-84ED-C27B760D41A3}
+		BuildVersion_StartDate = 2000/1/1
 	EndGlobalSection
 EndGlobal

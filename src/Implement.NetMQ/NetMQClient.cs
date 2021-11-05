@@ -32,6 +32,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         private void CurrentDomain_DomainUnload(object sender, EventArgs e)
         {
+            Dispose();
             _logger.Trace("Domain Unload");
             NetMQConfig.Cleanup(false);
         }
@@ -128,7 +129,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 throw ex;
             }
         }
-        public string Receive()
+        public string Receive(int timeoutMilliSecond=-1)
         {
             try
             {
@@ -137,10 +138,28 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 lock (this)
                 {
                     List<string> msg = new List<string>();
-
-                    var pass=_socket.TryReceiveMultipartStrings(Timeout, ref msg,4);
-                    if (pass)
+                    if (timeoutMilliSecond>0)
                     {
+                        var pass = _socket.TryReceiveMultipartStrings(TimeSpan.FromMilliseconds(timeoutMilliSecond), ref msg, 4);
+                        if (pass)
+                        {
+                            for (int i = 0; i < msg.Count; i++)
+                            {
+                                _logger.Debug($"Frame {i}: {msg[i]}");
+                            }
+                            var returnVal = msg[0];
+                            _logger.Info("Message has been received");
+                            return returnVal;
+                        }
+                        else
+                        {
+                            throw new NetMQClientException("Receiving message timeout");
+                        }
+
+                    }
+                    else
+                    {
+                        msg = _socket.ReceiveMultipartStrings();
                         for (int i = 0; i < msg.Count; i++)
                         {
                             _logger.Debug($"Frame {i}: {msg[i]}");
@@ -148,10 +167,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                         var returnVal = msg[0];
                         _logger.Info("Message has been received");
                         return returnVal;
-                    }
-                    else
-                    {
-                        throw new NetMQClientException("Receiving message timeout");
+
                     }
                 }
 
@@ -211,7 +227,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
             }
         }
-        public void Send(ICommand cmd)
+        public void Send(ICommand cmd,int timeoutMilliSecond = -1)
         {
             try
             {
@@ -220,15 +236,22 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 lock (this)
                 {
                     _logger.Debug((cmd as CommandBase).String);
-
-                    var pass = _socket.TrySendFrame(Timeout, JsonConvert.SerializeObject(cmd));
-                    if (pass)
+                    if (timeoutMilliSecond > 0)
                     {
-                        _logger.Info("Message has been sent");
+                        var pass = _socket.TrySendFrame(TimeSpan.FromMilliseconds(timeoutMilliSecond), JsonConvert.SerializeObject(cmd));
+                        if (pass)
+                        {
+                            _logger.Info("Message has been sent");
+                        }
+                        else
+                        {
+                            throw new NetMQClientException($"Sending message timeout");
+                        }
                     }
                     else
                     {
-                        throw new NetMQClientException($"Sending message timeout");
+                        _socket.SendFrame(JsonConvert.SerializeObject(cmd));
+                        _logger.Info("Message has been sent");
                     }
 
                 }
@@ -241,7 +264,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         }
 
-        public string Query(ICommand cmd)
+        public string Query(ICommand cmd,int timeoutMilliSecond)
         {
             try
             {
@@ -249,9 +272,9 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
                 lock (this)
                 {
-                    Send(cmd);
+                    Send(cmd,timeoutMilliSecond);
                     //return string begins
-                    var res = Receive();
+                    var res = Receive(timeoutMilliSecond);
                     if (res.Contains("[Error]:"))
                     {
                         _logger.Error(res);

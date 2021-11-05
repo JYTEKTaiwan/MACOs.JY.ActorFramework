@@ -11,9 +11,17 @@ namespace TestService
 {
     public class TestService : DeviceBase
     {
+        public static Command<int> NumberCommand { get; set; } = new Command<int>("Number", 5);
+
         public Command<string> TestCommand { get; } = new Command<string>("WalkyTalky", null);
         public Command<double[]> QueryCommand { get; } = new Command<double[]>("ArrayData", null);
         public Command Command { get; } = new Command("Test");
+
+        public string Number(int x)
+        {
+            return x.ToString();
+        }
+
         public string Test()
         {
             return "Done";
