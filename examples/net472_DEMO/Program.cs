@@ -27,7 +27,7 @@ namespace net472_DEMO
             {                
                 AliasName="DEMO",
             });
-
+            /*
             var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip, ListeningPort = 1234 };
             var client = clientConnInfo.Search();
             var sw = new Stopwatch();
@@ -74,8 +74,10 @@ namespace net472_DEMO
                     Console.WriteLine();
                 }
             }
-
+            
             client.Dispose();
+            */
+            Console.ReadKey();
             server.Dispose();
         }
     }

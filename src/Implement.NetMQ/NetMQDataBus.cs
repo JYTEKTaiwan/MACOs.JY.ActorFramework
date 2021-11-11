@@ -134,7 +134,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
                 Thread.Sleep(Timeout);
                 _beacon?.Dispose();
-                _serverSocket?.Disconnect(_serverSocket.Options.LastEndpoint);
+                //_serverSocket?.Disconnect(_serverSocket.Options.LastEndpoint);
                 _serverSocket?.Dispose();
                 _logger.Info("Socket and beacon are removed and disposed");
 
@@ -276,6 +276,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                         }
                         else
                         {
+                            _logger.Trace($"{content}");
+                            /*
                             JToken token = JToken.Parse(content);
                             if (token["Parameter"] != null)
                             {
@@ -289,6 +291,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                                 _logger.Debug($"[{token["Name"]}");
 
                             }
+                            */
                             _logger.Info("New command is received");
 
                             try

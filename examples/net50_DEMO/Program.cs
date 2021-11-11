@@ -49,7 +49,7 @@ namespace net50_DEMO
                     sw.Restart();
                     res = client.Query(server.QueryCommand.Generate(data));
                     var elapsed = sw.ElapsedMilliseconds;
-                    //Console.WriteLine(res);
+                    Console.WriteLine(res);
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
                     Console.WriteLine();
                 }

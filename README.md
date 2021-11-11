@@ -68,6 +68,8 @@ var clientConnInfo = new NetMQClientContext("DEMO");
 var client = clientConnInfo.Search();
 ```
 
+
+
 ### Let's commute!
 
 JYTEK provides "CommandBase" abstract class, user can create the command object by using "Create" Method. The name and parameters must be perfectly matched with the custom method. Use "Query" to parse, execute and return the result.
@@ -81,11 +83,7 @@ CommandBase cmd = CommandBase.Create("WalkyTalky", str);
 var res = client.Query(cmd);
 ```
 
-
-
 Remember to call "Dispose" after you're finished.
-
-
 
 Here's the total example code:
 
@@ -121,3 +119,59 @@ class Program
 }
 ```
 
+
+
+## Advance
+
+### Access DeviceBase object without using databus
+
+In some cases, DeviceBase object is created and accessed in the same application locally, so user could directly access the DeviceBase object by calling the ExecuteCommand method.
+
+This is helpful when you want to access the DeviceBase locally without creating new Client and new Databus.
+```c#
+class Program
+{
+  static void Main(string[] args)
+  {        
+    //initial the device object only (databus is not loaded)
+    TestService server = new TestService();     
+    
+    var str = Console.ReadLine();        
+    //Create command object with the name and parameters
+    CommandBase cmd = CommandBase.Create("WalkyTalky", str);
+	
+	//Directly push the command into DeviceBase object without loading databus
+	server.ExecuteCommand(cmd);
+	
+	server.Dispose();
+  }
+}
+```
+
+
+
+### Override the return value algorithm
+
+ When command is being executed, the response data is converted to string format using C# default method ToString().  We also provide the ability to override the convert method, like below
+
+
+1. User should create a new command class by implementing the Command class in MACOs.JY.ActorFramework.Core.Commands namspace
+2. Create a new override method ConvertToString 
+
+
+```C#
+    public class DateTimeCommand : Command
+    {
+        public DateTimeCommand(string name) : base(name)
+        {
+        }
+
+        public override string ConvertToString(object obj)
+        {
+        	//override the format into "HH:mm:ss.fff" format 
+        	//Default format is "HH:mm:ss" 
+            return ((DateTime)obj).ToString("HH:mm:ss.fff");
+        }
+    }
+
+```
