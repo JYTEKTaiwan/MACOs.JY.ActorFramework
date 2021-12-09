@@ -12,7 +12,7 @@
 		<Product>MACOs.JY.ActorFramework</Product>
 		<Description>Hosting for dependency injection usage</Description>
 		<PackageProjectUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Implement.NetMQ</RepositoryUrl>
+		<RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Hosting</RepositoryUrl>
 		<PackageTags>C#, Actor Framework</PackageTags>
 		<PackageIcon>JYTek.png</PackageIcon>
 		<PackageReleaseNotes>Hosting library for IDevice</PackageReleaseNotes>
