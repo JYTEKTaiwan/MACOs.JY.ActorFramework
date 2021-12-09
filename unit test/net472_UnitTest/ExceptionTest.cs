@@ -21,7 +21,7 @@ namespace net472_UnitTest
     {
         [TestMethod]
         public void RunWithoutDatabusLoaded()
-        {
+        {   
             var svrc = new TestService();
             string response;
 

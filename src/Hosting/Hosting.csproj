@@ -1,11 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-		<PackageId>$(AssemblyName)</PackageId>
+		<PackageId>MACOs.JY.ActorFramework.Hosting</PackageId>
 		<AssemblyName>MACOs.JY.ActorFramework.Hosting</AssemblyName>
 		<Authors>JYTEK TAIWAN CORP.</Authors>
 		<Copyright>JYTEK TAIWAN CORP.</Copyright>
@@ -16,8 +16,17 @@
 		<PackageTags>C#, Actor Framework</PackageTags>
 		<PackageIcon>JYTek.png</PackageIcon>
 		<PackageReleaseNotes>Hosting library for IDevice</PackageReleaseNotes>
+		<Version>1.0.5</Version>
+		<PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
 
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Include="..\..\icon\JYTek.png">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
@@ -25,7 +34,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\src\Core\Core.csproj" />
+		<ProjectReference Include="..\Core\Core.csproj" />
 	</ItemGroup>
 
 </Project>
