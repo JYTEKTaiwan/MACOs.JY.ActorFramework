@@ -1,6 +1,8 @@
 ﻿using MACOs.JY.ActorFramework.Core.Commands;
 using MACOs.JY.ActorFramework.Core.Devices;
+using MACOs.JY.ActorFramework.Hosting;
 using MACOs.JY.ActorFramework.Implement.NetMQ;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
@@ -11,18 +13,23 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace net50_DEMO
+namespace net60_DEMO
 {
     class Program
     {
         static async Task Main(string[] args)
         {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(System.IO.Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .Build();
+
             IHost host = Host.CreateDefaultBuilder(args)
                 .ConfigureServices((_, services) =>
                     services
-                    .AddScoped<TestService>()
+                    .AddDevice<TestService>(config.GetSection("Dev1"))
                     ).Build();
-            await host.RunAsync();
+            host.RunAsync();
 
             Console.WriteLine("========================================================================================");
             Console.WriteLine("== Welcome to MACOs.JY.ActorFramework example, there are 3 types of command supported ==");
@@ -31,13 +38,8 @@ namespace net50_DEMO
             Console.WriteLine("==      3. key in number will reponse the double array with the assigned size         ==");
             Console.WriteLine("========================================================================================");
 
-            TestService server = host.Services.GetRequiredService<TestService>();
+            var server = host.Services.GetRequiredService<IDevice>() as TestService;
             var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
-            //var ip = "127.0.0.1";
-            server.LoadDataBus(new NetMQDataBusContext()
-            {
-                AliasName = "DEMO",
-            });
 
             var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip };
             var client = clientConnInfo.Search();

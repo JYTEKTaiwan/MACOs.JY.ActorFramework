@@ -6,8 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MACOs.JY.ActorFramework.Implement.NetMQ" Version="1.1.2" />
+    <PackageReference Include="MACOs.JY.ActorFramework.Hosting" Version="1.0.5" />
+    <PackageReference Include="MACOs.JY.ActorFramework.Implement.NetMQ" Version="1.1.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
