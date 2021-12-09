@@ -1,26 +1,37 @@
 ﻿using MACOs.JY.ActorFramework.Core.Commands;
 using MACOs.JY.ActorFramework.Core.Devices;
 using MACOs.JY.ActorFramework.Implement.NetMQ;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace net50_DEMO
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
+            IHost host = Host.CreateDefaultBuilder(args)
+                .ConfigureServices((_, services) =>
+                    services
+                    .AddScoped<TestService>()
+                    ).Build();
+            await host.RunAsync();
+
             Console.WriteLine("========================================================================================");
             Console.WriteLine("== Welcome to MACOs.JY.ActorFramework example, there are 3 types of command supported ==");
             Console.WriteLine("==      1. key in Q will leave the program                                            ==");
             Console.WriteLine("==      2. key in any text except Q will immediate response                           ==");
             Console.WriteLine("==      3. key in number will reponse the double array with the assigned size         ==");
             Console.WriteLine("========================================================================================");
-            TestService server = new TestService();
+
+            TestService server = host.Services.GetRequiredService<TestService>();
             var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
             //var ip = "127.0.0.1";
             server.LoadDataBus(new NetMQDataBusContext()

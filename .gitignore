@@ -347,3 +347,6 @@ healthchecksdb
 /NetMQRawTest
 /unit test/net472_UnitTest/NLog.config
 /documents/MACOs.JY.ActorFramework.pdf
+/ConsoleApp1
+/NLog_Test
+/JsonTest

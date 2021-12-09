@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net472;net5.0</TargetFrameworks>
+    <TargetFrameworks>net472;net6.0</TargetFrameworks>
     <AssemblyName>MACOs.JY.ActorFramework.Implement.NetMQ</AssemblyName>
     <RootNamespace>MACOs.JY.ActorFramework.Implement.NetMQ</RootNamespace>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -13,7 +13,7 @@
     <RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Implement.NetMQ</RepositoryUrl>
     <PackageTags>C#, Actor Framework</PackageTags>
     <PackageIcon>JYTek.png</PackageIcon>
-    <Version>1.1.3</Version>
+    <Version>1.1.4</Version>
     <PackageReleaseNotes>NetMQ implementation</PackageReleaseNotes>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
   </PropertyGroup>

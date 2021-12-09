@@ -5,8 +5,17 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
+using System.Linq;
+#if NET6_0_OR_GREATER
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
+
+#endif
+
+#if NET6_0_OR_GREATER
+
+#endif
 
 namespace MACOs.JY.ActorFramework.Core.Devices
 {
@@ -16,22 +25,28 @@ namespace MACOs.JY.ActorFramework.Core.Devices
     /// </summary>
     public abstract class DeviceBase : IDevice
     {
-        
-        private Logger _logger = LogManager.GetCurrentClassLogger();
+        private readonly IDataBusContext _busContext;
+        private readonly Logger _logger;
+
         private IDataBus _bus;
+
         private bool isDisposed = false;
         public string Name { get; set; }
+        public string BusAlias { get; set; }
         public string ConnectionInfo { get; set; }
         /// <summary>
         /// public event after the command is executed
         /// </summary>
         public event ExecuteCompleteEvent OnExecutionComplete;
-        public DeviceBase()
+
+public DeviceBase()
         {
+            Name = this.GetType().Name;
+            _logger=NLog.LogManager.GetLogger(this.GetType().FullName);
             _logger.Trace("Begin creaeting DeviceBase object");
             _logger.Info("Object is created");
-
         }
+
         /// <summary>
         /// New data event from databus
         /// </summary>
@@ -80,11 +95,13 @@ namespace MACOs.JY.ActorFramework.Core.Devices
             {
                 _logger.Trace("Start converting to ICommand");
                 var str = msg.ToString();
+
                 JToken token = JToken.Parse(str);
-                Type t = token["Type"].ToObject<Type>();
+                Type t = Type.GetType(token["ParameterQualifiedName"].ToString());
                 var cmd = JsonConvert.DeserializeObject(str, t) as ICommand;
                 cmd.Instance = this;
-                _logger.Debug((cmd as CommandBase).String);
+                cmd.MethodName = token["MethodName"].ToString();
+                _logger.Debug((cmd as CommandBase).GetSimplifiedString());
                 _logger.Info($"Command is converted successfully");
                 return cmd;
             }
@@ -133,7 +150,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
                 _logger.Debug("Start loading databus from context");
                 _bus = databusContext.NewInstance();
                 _bus.Configure();
-                Name = _bus.Name;
+                BusAlias = _bus.Name;
                 _bus.OnDataReady += Bus_OnDataReady;
                 _bus.Start();
                 _logger.Info("Databus is loaded and starts");
@@ -158,7 +175,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
                 _logger.Debug("Load databus from IDataBus object");
                 _bus = databus;
                 _bus.Configure();
-                Name = _bus.Name;
+                BusAlias = _bus.Name;
                 _bus.OnDataReady += Bus_OnDataReady;
                 _bus.Start();
                 _logger.Info("Databus is loaded and starts");

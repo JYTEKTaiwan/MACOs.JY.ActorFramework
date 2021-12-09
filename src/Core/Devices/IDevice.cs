@@ -7,7 +7,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
 {
     public interface IDevice:IDisposable
     {
-        string Name { get; set; }
+        string BusAlias { get; set; }
         /// <summary>
         /// Load databus from context object
         /// </summary>

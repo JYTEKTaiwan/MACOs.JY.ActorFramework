@@ -32,7 +32,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         private readonly NetMQDataBusContext _config;
         private CancellationTokenSource cts_beaconListening;
         private CancellationTokenSource cts_readMessage;
-        private NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
+        private NLog.Logger _logger;
 
         public bool IsDisposed { get; set; } = false;
         public string Name { get; set; }
@@ -47,6 +47,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
             _config = config;
+            _logger= NLog.LogManager.GetLogger($"{this.GetType().Name}_{_config.AliasName}");
             _logger.Info("Object is created");
         }
 

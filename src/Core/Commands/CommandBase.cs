@@ -13,21 +13,19 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public const string Accepted = "ACCEPTED";
     }
 
+    public static class CommandContext
+    {
+        public static BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
+    }
     public abstract class CommandBase : ICommand
     {
-
-        public BindingFlags flags { get; } = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance;
         public IDevice Instance { get; set; }
-        public string Name { get; }
-        public Type Type { get; }
-        public Type[] ParameterTypes { get; set; }
-        public string String { get; protected set; }
+        public string MethodName { get; set; }
+        public string ParameterQualifiedName { get; }
         public CommandBase(string name)
         {
-            Name = name;
-            Type = this.GetType();
-            var param = Type.GetConstructors()[0].GetParameters();
-            ParameterTypes = param.Select(x => x.ParameterType).Skip(1).ToArray();
+            MethodName = name;
+            ParameterQualifiedName = this.GetType().AssemblyQualifiedName;
         }
 
         protected CommandBase()
@@ -35,6 +33,8 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }       
 
         public abstract object Execute();
+
+        public abstract string GetSimplifiedString();
         public string DefaultConvertString(object obj)
         {
             return obj != null ? obj.ToString() : "";
@@ -83,14 +83,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         }
 
+        public Type[] GetParameterTypes()
+        {
+            return this.GetType().GenericTypeArguments;
+        }
+
     }
     public class Command : CommandBase
     {
 
         public Command(string name) : base(name)
         {
-            String = $"[{name}]:";
-
         }
 
         public override string ConvertToString(object obj)
@@ -100,10 +103,10 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         public override object Execute()
         {
-            var mi = Instance.GetType().GetMethod(Name, this.flags);
+            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags);
             if (mi == null)
             {
-                throw new CommandNotFoundException($"Method not found: {Name}");
+                throw new CommandNotFoundException($"Method not found: {MethodName}");
             }
             else
             {
@@ -113,11 +116,15 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public CommandBase Generate()
         {
-            var obj = new Command(this.Name);
+            var obj = new Command(this.MethodName);
             return obj;
         }
 
+        public override string GetSimplifiedString()
+        {
+            return $"[{base.MethodName}]:";
 
+        }
     }
     public class Command<T1> : CommandBase
     {
@@ -126,15 +133,15 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1) : base(name)
         {
             Parameter = new Tuple<T1>(param1);
-            String = $"[{name}]: {param1}";
-
+            
         }
         public override object Execute()
         {
-            var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
+            var ParameterTypes = this.GetParameterTypes();
+            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
-                throw new CommandNotFoundException($"Method not found: {Name}({ParameterTypes[0].Name})");
+                throw new CommandNotFoundException($"Method not found: {MethodName}({ParameterTypes[0].Name})");
             }
             else
             {
@@ -143,13 +150,19 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public CommandBase Generate(T1 param1)
         {
-            var obj = new Command<T1>(this.Name, param1);
+            var obj = new Command<T1>(this.MethodName, param1);
             return obj;
         }
         public override string ConvertToString(object obj)
         {
             return base.DefaultConvertString(obj);
         }
+        public override string GetSimplifiedString()
+        {
+            return $"[{base.MethodName}]: {Parameter.Item1}";
+
+        }
+
     }
     public class Command<T1, T2> : CommandBase
     {
@@ -157,16 +170,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2) : base(name)
         {
             Parameter = new Tuple<T1, T2>(param1, param2);
-            String = $"[{name}]: {param1},{param2}";
 
         }
 
         public override object Execute()
         {
-            var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
+            var ParameterTypes = this.GetParameterTypes();
+
+            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
-                throw new CommandNotFoundException($"Method not found: {Name}({ParameterTypes[0].Name},{ParameterTypes[1].Name})");
+                throw new CommandNotFoundException($"Method not found: {MethodName}({ParameterTypes[0].Name},{ParameterTypes[1].Name})");
             }
             else
             {
@@ -177,12 +191,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public CommandBase Generate(T1 param1, T2 param2)
         {
-            var obj = new Command<T1, T2>(this.Name, param1, param2);
+            var obj = new Command<T1, T2>(this.MethodName, param1, param2);
             return obj;
         }
         public override string ConvertToString(object obj)
         {
             return base.DefaultConvertString(obj);
+        }
+        public override string GetSimplifiedString()
+        {
+            return $"[{base.MethodName}]: {Parameter.Item1},{Parameter.Item2}";
+
         }
 
     }
@@ -193,17 +212,18 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3>(param1, param2, param3);
-            String = $"[{name}]: {param1},{param2},{param3}";
 
         }
 
         public override object Execute()
         {
-            var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
+            var ParameterTypes = this.GetParameterTypes();
+
+            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
-                    $"{Name}(" +
+                    $"{MethodName}(" +
                     $"{ParameterTypes[0].Name}," +
                     $"{ParameterTypes[1].Name}," +
                     $"{ParameterTypes[2].Name})");
@@ -216,12 +236,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3)
         {
-            var obj = new Command<T1, T2, T3>(this.Name, param1, param2, param3);
+            var obj = new Command<T1, T2, T3>(this.MethodName, param1, param2, param3);
             return obj;
         }
         public override string ConvertToString(object obj)
         {
             return base.DefaultConvertString(obj);
+        }
+        public override string GetSimplifiedString()
+        {
+            return $"[{base.MethodName}]: {Parameter.Item1},{Parameter.Item2}.{Parameter.Item3}";
+
         }
 
     }
@@ -231,17 +256,18 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3, T4 param4) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3, T4>(param1, param2, param3, param4);
-            String = $"[{name}]: {param1},{param2},{param3},{param4}";
 
         }
 
         public override object Execute()
         {
-            var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
+            var ParameterTypes = this.GetParameterTypes();
+
+            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
-    $"{Name}(" +
+    $"{MethodName}(" +
     $"{ParameterTypes[0].Name}," +
     $"{ParameterTypes[1].Name}," +
     $"{ParameterTypes[2].Name}," +
@@ -256,12 +282,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4)
         {
-            var obj = new Command<T1, T2, T3, T4>(this.Name, param1, param2, param3, param4);
+            var obj = new Command<T1, T2, T3, T4>(this.MethodName, param1, param2, param3, param4);
             return obj;
         }
         public override string ConvertToString(object obj)
         {
             return base.DefaultConvertString(obj);
+        }
+        public override string GetSimplifiedString()
+        {
+            return $"[{base.MethodName}]: {Parameter.Item1},{Parameter.Item2}.{Parameter.Item3},{Parameter.Item4}";
+
         }
 
     }
@@ -272,17 +303,18 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3, T4, T5>(param1, param2, param3, param4, param5);
-            String = $"[{name}]: {param1},{param2},{param3},{param4},{param5}";
 
         }
 
         public override object Execute()
         {
-            var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
+            var ParameterTypes = this.GetParameterTypes();
+
+            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
-    $"{Name}(" +
+    $"{MethodName}(" +
     $"{ParameterTypes[0].Name}," +
     $"{ParameterTypes[1].Name}," +
     $"{ParameterTypes[2].Name}," +
@@ -298,12 +330,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4, T5 param5)
         {
-            var obj = new Command<T1, T2, T3, T4, T5>(this.Name, param1, param2, param3, param4, param5);
+            var obj = new Command<T1, T2, T3, T4, T5>(this.MethodName, param1, param2, param3, param4, param5);
             return obj;
         }
         public override string ConvertToString(object obj)
         {
             return base.DefaultConvertString(obj);
+        }
+        public override string GetSimplifiedString()
+        {
+            return $"[{base.MethodName}]: {Parameter.Item1},{Parameter.Item2}.{Parameter.Item3},{Parameter.Item4},{Parameter.Item5}";
+
         }
 
     }
@@ -314,17 +351,18 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3, T4, T5, T6>(param1, param2, param3, param4, param5, param6);
-            String = $"[{name}]: {param1},{param2},{param3},{param4},{param5},{param6}";
 
         }
 
         public override object Execute()
         {
-            var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
+            var ParameterTypes = this.GetParameterTypes();
+
+            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
-    $"{Name}(" +
+    $"{MethodName}(" +
     $"{ParameterTypes[0].Name}," +
     $"{ParameterTypes[1].Name}," +
     $"{ParameterTypes[2].Name}," +
@@ -339,12 +377,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6)
         {
-            var obj = new Command<T1, T2, T3, T4, T5, T6>(this.Name, param1, param2, param3, param4, param5, param6);
+            var obj = new Command<T1, T2, T3, T4, T5, T6>(this.MethodName, param1, param2, param3, param4, param5, param6);
             return obj;
         }
         public override string ConvertToString(object obj)
         {
             return base.DefaultConvertString(obj);
+        }
+        public override string GetSimplifiedString()
+        {
+            return $"[{base.MethodName}]: {Parameter.Item1},{Parameter.Item2}.{Parameter.Item3},{Parameter.Item4},{Parameter.Item5},{Parameter.Item6}";
+
         }
 
     }
@@ -354,16 +397,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6, T7 param7) : base(name)
         {
             Parameter = new Tuple<T1, T2, T3, T4, T5, T6, T7>(param1, param2, param3, param4, param5, param6, param7);
-            String = $"[{name}]: {param1},{param2},{param3},{param4},{param5},{param6},{param7}";
         }
 
         public override object Execute()
         {
-            var mi = Instance.GetType().GetMethod(Name, this.flags, null, ParameterTypes, null);
+            var ParameterTypes = this.GetParameterTypes();
+
+            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
-    $"{Name}(" +
+    $"{MethodName}(" +
     $"{ParameterTypes[0].Name}," +
     $"{ParameterTypes[1].Name}," +
     $"{ParameterTypes[2].Name}," +
@@ -379,12 +423,17 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6, T7 param7)
         {
-            var obj = new Command<T1, T2, T3, T4, T5, T6, T7>(this.Name, param1, param2, param3, param4, param5, param6, param7);
+            var obj = new Command<T1, T2, T3, T4, T5, T6, T7>(this.MethodName, param1, param2, param3, param4, param5, param6, param7);
             return obj;
         }
         public override string ConvertToString(object obj)
         {
             return base.DefaultConvertString(obj);
+        }
+        public override string GetSimplifiedString()
+        {
+            return $"[{base.MethodName}]: {Parameter.Item1},{Parameter.Item2}.{Parameter.Item3},{Parameter.Item4},{Parameter.Item5},{Parameter.Item6},{Parameter.Item7}";
+
         }
 
     }

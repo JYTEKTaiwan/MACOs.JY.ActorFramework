@@ -235,7 +235,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
                 lock (this)
                 {
-                    _logger.Debug((cmd as CommandBase).String);
+                    _logger.Debug((cmd as CommandBase).GetSimplifiedString());
                     if (timeoutMilliSecond > 0)
                     {
                         var pass = _socket.TrySendFrame(TimeSpan.FromMilliseconds(timeoutMilliSecond), JsonConvert.SerializeObject(cmd));

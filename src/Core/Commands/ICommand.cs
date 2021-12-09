@@ -5,8 +5,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 {
     public interface ICommand
     {
-        string Name { get; }
-        Type Type { get;}
+        string MethodName { get; set; }
         IDevice Instance { get; set; }
         object Execute();
         string ConvertToString(object obj);

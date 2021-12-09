@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageId>$(AssemblyName)</PackageId>
+		<AssemblyName>MACOs.JY.ActorFramework.Hosting</AssemblyName>
+		<Authors>JYTEK TAIWAN CORP.</Authors>
+		<Copyright>JYTEK TAIWAN CORP.</Copyright>
+		<Product>MACOs.JY.ActorFramework</Product>
+		<Description>Hosting for dependency injection usage</Description>
+		<PackageProjectUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Implement.NetMQ</RepositoryUrl>
+		<PackageTags>C#, Actor Framework</PackageTags>
+		<PackageIcon>JYTek.png</PackageIcon>
+		<PackageReleaseNotes>Hosting library for IDevice</PackageReleaseNotes>
+
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\src\Core\Core.csproj" />
+	</ItemGroup>
+
+</Project>
