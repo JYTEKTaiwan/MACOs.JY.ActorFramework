@@ -23,6 +23,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         public SocketAccepted SocketAccept;
         public string EndPoint { get; set; } = "";
         public TimeSpan Timeout { get; set; } = TimeSpan.FromMilliseconds(5000);
+        public string TargetName { get; set; }
         public NetMQClient()
         {
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;

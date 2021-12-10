@@ -70,7 +70,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 {
                     throw new NetMQClientException("Target alias cannot be empty");
                 }
-                client = new NetMQClient();
+                client = new NetMQClient() { TargetName = TargetAlias };
                 BeaconConfig();
                 client.Bind(Type + "://" + ListeningIP, ListeningPort);
                 client.SocketAccept = () =>
@@ -86,6 +86,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
                 if (!res)
                 {
+                    client?.Dispose();
+                    client = null;
                     if (isAccepted)
                     {
                         throw new NetMQClientException($"Client not found: Connection is established, but ACK failed. Address:{ListeningIP}:{ListeningPort}");
