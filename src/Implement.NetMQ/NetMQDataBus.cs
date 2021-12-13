@@ -27,7 +27,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         // 1. RouterSocket - handler different DealerSocket and send response back to each of them
         // 2. BeaconMessage - Dicovery in the local domain(UDP)
         private NetMQSocket _serverSocket;
-        private NetMQBeacon _beacon;
+        private SubscriberSocket _subSocket;
         // Multi-Thread support for NetMQ protocol
         private readonly NetMQDataBusContext _config;
         private CancellationTokenSource cts_beaconListening;
@@ -49,6 +49,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             _config = config;
             _logger= NLog.LogManager.GetLogger($"{this.GetType().Name}_{_config.AliasName}");
             _logger.Info("Object is created");
+            
         }
 
         #region Public Methods
@@ -99,7 +100,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     Name = _config.AliasName;
                 }
 
-                BeaconConfig();
+                SubscriberConfig();
 
                 RouterSocketConfig();
 
@@ -134,7 +135,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 Stop();
 
                 Thread.Sleep(Timeout);
-                _beacon?.Dispose();
+                _subSocket?.Dispose();
                 //_serverSocket?.Disconnect(_serverSocket.Options.LastEndpoint);
                 _serverSocket?.Dispose();
                 _logger.Info("Socket and beacon are removed and disposed");
@@ -166,14 +167,13 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
 
         }
-        private void BeaconConfig()
+        private void SubscriberConfig()
         {
             try
             {
                 _logger.Trace("Start configuring beacon");
 
-                _beacon = new NetMQBeacon();
-
+                _subSocket = new SubscriberSocket();                
                 bool emptyIP = string.IsNullOrEmpty(_config.BeaconIP);
                 if (_config.BeaconIP == "127.0.0.1")
                 {
@@ -201,24 +201,19 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 //configure beacon
                 if (emptyIP)
                 {
-                    _beacon.ConfigureAllInterfaces(_config.BeaconPort);
+                    _subSocket.Bind($"{_config.Type}://*:{_config.BeaconPort}");                    
                 }
                 else
                 {
-                    _beacon.Configure(_config.BeaconPort, _config.BeaconIP);
+                    _subSocket.Bind($"{_config.Type}://{_config.BeaconIP}:{_config.BeaconPort}");
                 }
-
-                //check if beacon is sucessfully bounded to endpoint
-                if (string.IsNullOrEmpty(_beacon.BoundTo))
-                {
-                    throw new BeaconException($"Beacon binding failed: {_config.BeaconIP}");
-                }
+                
                 _logger.Info("Beacon configuration is done");
             }
             catch (Exception ex)
             {
                 LogError(ex);
-                _beacon?.Dispose();
+                _subSocket?.Dispose();
                 throw ex;
             }
 
@@ -228,20 +223,21 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             Task.Run(() =>
             {
                 _logger.Trace($"Start waiting for the beacon named: {Name}");
-                _beacon.Subscribe(Name);
+                _subSocket.Subscribe(Name);
                 _logger.Debug($"Beacon start listening at port {_config.BeaconPort}");
                 while (!cts_beaconListening.IsCancellationRequested)
                 {
-                    BeaconMessage msg;
-                    if (_beacon.TryReceive(Timeout, out msg))
+                    string topic = "";
+                    string msg = ""; ;
+                    if (_subSocket.TryReceiveFrameString(Timeout,out topic))
                     {
                         //_beacon.Unsubscribe();
-                        _logger.Debug($"Beacon received from {msg.PeerAddress}");
+                        //_logger.Debug($"Beacon received from {msg.PeerAddress}");
+                        _subSocket.TryReceiveFrameString(out msg);
                         //Check 
-                        var info = msg.String.Split('>')[1];
-                        _logger.Debug($"Client info was extracted: {info}");
-                        _serverSocket.Connect(info);
-                        _logger.Debug($"Client is connected {info}");
+                        _logger.Debug($"Client info was extracted: {msg}");
+                        _serverSocket.Connect(msg);                        
+                        _logger.Debug($"Client is connected {msg}");
                     }
                 }
             });
@@ -278,21 +274,6 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                         else
                         {
                             _logger.Trace($"{content}");
-                            /*
-                            JToken token = JToken.Parse(content);
-                            if (token["Parameter"] != null)
-                            {
-                                _logger.Trace($"[{id}] [{token["Name"]}: {token["Parameter"].ToString().Replace(Environment.NewLine, "")}");
-                                _logger.Debug($"[{token["Name"]}: {token["Parameter"].ToString().Replace(Environment.NewLine, "")}");
-
-                            }
-                            else
-                            {
-                                _logger.Trace($"[{id}] [{token["Name"]}");
-                                _logger.Debug($"[{token["Name"]}");
-
-                            }
-                            */
                             _logger.Info("New command is received");
 
                             try

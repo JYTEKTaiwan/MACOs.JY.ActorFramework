@@ -351,3 +351,5 @@ healthchecksdb
 /NLog_Test
 /JsonTest
 /unit test
+/NetMQTEst
+/NetMQTest_Net6

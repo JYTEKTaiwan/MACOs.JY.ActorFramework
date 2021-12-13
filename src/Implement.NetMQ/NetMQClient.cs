@@ -265,7 +265,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         }
 
-        public string Query(ICommand cmd,int timeoutMilliSecond)
+        public string Query(ICommand cmd,int timeoutMilliSecond=-1)
         {
             try
             {

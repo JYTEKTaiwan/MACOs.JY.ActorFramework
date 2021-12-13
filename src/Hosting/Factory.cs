@@ -1,5 +1,6 @@
 ﻿using MACOs.JY.ActorFramework.Core.DataBus;
 using MACOs.JY.ActorFramework.Core.Devices;
+using MACOs.JY.ActorFramework.Clients;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 
@@ -23,4 +24,12 @@ namespace MACOs.JY.ActorFramework.Hosting
 
         }
     }
+    internal sealed class ClientFactory
+    {
+        public static IClient Create<T>(IClientContext ctxt)
+        {
+            return ctxt.Search();
+        }
+    }
+
 }
