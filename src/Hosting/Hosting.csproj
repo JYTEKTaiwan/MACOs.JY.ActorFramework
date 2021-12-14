@@ -16,7 +16,7 @@
 		<PackageTags>C#, Actor Framework</PackageTags>
 		<PackageIcon>JYTek.png</PackageIcon>
 		<PackageReleaseNotes>Hosting library for IDevice</PackageReleaseNotes>
-		<Version>1.0.7</Version>
+		<Version>1.0.8</Version>
 		<PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
 
 	</PropertyGroup>
