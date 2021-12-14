@@ -17,7 +17,7 @@
     <RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Clients</RepositoryUrl>
     <Version>1.1.8</Version>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
-    <BaseOutputPath>..\..\build\MACOs.JY.ActorFramework.Clients\bin</BaseOutputPath>
+    <BaseOutputPath>bin\</BaseOutputPath>
     <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
   </PropertyGroup>
 
