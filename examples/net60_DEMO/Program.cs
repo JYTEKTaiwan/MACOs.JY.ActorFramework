@@ -43,10 +43,9 @@ namespace net60_DEMO
             var server = host.Services.GetRequiredService<IDevice>() as TestService;
             var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
 
-            //var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip };
-            //var client = clientConnInfo.Search();
+            var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip };
+            var client = clientConnInfo.Search();
             var sw = new Stopwatch();
-            IClient client = new NetMQClient();
             while (true)
             {
                 Console.Write("Enter Command: ");

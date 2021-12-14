@@ -23,7 +23,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
     public class NetMQClientContext : IClientContext,IDisposable
     {
         private NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
-        private PublisherSocket _pubSocket;
+        private NetMQBeacon _beacon;
         private bool isDisposed = false;
         private IPAddress ip;
         /// <summary>
@@ -73,7 +73,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     throw new NetMQClientException("Target alias cannot be empty");
                 }
                 client = new NetMQClient() { TargetName = TargetAlias };
-                PublisherConfigure();
+                BeaconConfigure();
                 client.Bind(Type + "://" + ListeningIP, ListeningPort);
                 var cts = new CancellationTokenSource();
 
@@ -81,26 +81,13 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 {
                     isAccepted = true;
                     //once client got connected, shutdown the beacon task
-                    cts.Cancel();
-
+                    _beacon.Silence();
                 };
-                Task.Run(() => 
-                {
-                    while (!cts.IsCancellationRequested)
-                    {
-                        Task.Delay(1000).Wait();
-                        
-                        _pubSocket.SendMoreFrame(TargetAlias).SendFrame(client.EndPoint);
-                    }
-                    _pubSocket?.Disconnect($"{Type}://{ip}:{BeaconPort}");
 
-                    _pubSocket.Dispose();
-
-                });
-                
+                _beacon.Publish($"{TargetAlias}>{client.EndPoint}", TimeSpan.FromSeconds(1));                               
                 res = client.StartListening(Timeout);
                 client.SocketAccept = null;
-
+                _beacon.Dispose();
 
                 if (!res)
                 {
@@ -124,7 +111,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             catch (Exception ex)
             {
                 LogError(ex);
-                _pubSocket?.Dispose();
+                _beacon.Silence();
+                _beacon?.Dispose();
                 client?.Dispose();
                 throw ex;
             }
@@ -145,16 +133,16 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
             if (disposing)
             {
-                _pubSocket?.Dispose();
+                _beacon?.Dispose();
                 isDisposed = true;
             }
         }
-        private void PublisherConfigure()
+        private void BeaconConfigure()
         {
             try
             {
                 _logger.Trace("Start configuring beacon");
-                _pubSocket = new PublisherSocket();
+                _beacon = new NetMQBeacon();
 
                 bool emptyIP = string.IsNullOrEmpty(BeaconIP);
                 if (BeaconIP == "127.0.0.1")
@@ -173,6 +161,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     {
                         //Check if IP string is convertable
                          ip = IPAddress.Parse(BeaconIP);
+                        _beacon.Configure(BeaconPort, ip.ToString());
                     }
                     catch (Exception ex)
                     {
@@ -181,25 +170,24 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 }
                 else
                 {
-                     ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-
+                    _beacon.ConfigureAllInterfaces(BeaconPort);
                 }
 
-                _pubSocket.Connect($"{Type}://{ip}:{BeaconPort}");
 
-                ////check if beacon is sucessfully bounded to endpoint
-                //if (string.IsNullOrEmpty(_pubSocket.BoundTo))
-                //{
-                //    throw new BeaconException($"Beacon binding failed: {BeaconIP}");
-                //}
+
+                //check if beacon is sucessfully bounded to endpoint
+                if (string.IsNullOrEmpty(_beacon.BoundTo))
+                {
+                    throw new BeaconException($"Beacon binding failed: {BeaconIP}");
+                }
                 _logger.Info("Beacon configuration is done");
 
             }
             catch (Exception ex)
             {
                 LogError(ex);
-                _pubSocket?.Disconnect($"{Type}://{ip}:{BeaconPort}");
-                _pubSocket?.Dispose();
+                _beacon?.Silence();
+                _beacon?.Dispose();
                 throw ex;
             }
 

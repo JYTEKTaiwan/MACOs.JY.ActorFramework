@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MACOs.JY.ActorFramework.Hosting" Version="1.0.6" />
-    <PackageReference Include="MACOs.JY.ActorFramework.Implement.NetMQ" Version="1.1.6" />
+    <PackageReference Include="MACOs.JY.ActorFramework.Hosting" Version="1.0.7" />
+    <PackageReference Include="MACOs.JY.ActorFramework.Implement.NetMQ" Version="1.1.7" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
     <PackageReference Include="NLog" Version="4.7.13" />
     <PackageReference Include="NLog.Extensions.Logging" Version="1.7.4" />
