@@ -1,9 +1,7 @@
-﻿using MACOs.JY.ActorFramework.Clients;
-using MACOs.JY.ActorFramework.Core.Commands;
+﻿using MACOs.JY.ActorFramework.Core.Commands;
 using MACOs.JY.ActorFramework.Core.Devices;
 using MACOs.JY.ActorFramework.Implement.NetMQ;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -25,8 +23,8 @@ namespace net472_DEMO
             var ip = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
             //var ip = "127.0.0.1";
             server.LoadDataBus(new NetMQDataBusContext()
-            {                
-                AliasName="DEMO",
+            {
+                AliasName = "DEMO",
             });
             var clientConnInfo = new NetMQClientContext("DEMO") { ListeningIP = ip, ListeningPort = 1234 };
             var client = clientConnInfo.Search();
@@ -44,7 +42,7 @@ namespace net472_DEMO
                 else if (int.TryParse(str, out len))
                 {
                     var data = new double[len];
-                    var res=client.Query(server.QueryCommand.Generate(data));
+                    var res = client.Query(server.QueryCommand.Generate(data));
                     sw.Restart();
                     res = client.Query(server.QueryCommand.Generate(data));
                     var elapsed = sw.ElapsedMilliseconds;
@@ -52,7 +50,7 @@ namespace net472_DEMO
                     Console.WriteLine($"{DateTime.Now.ToLongTimeString()}\t{elapsed}ms");
                     Console.WriteLine();
                 }
-                else if (str=="Now")
+                else if (str == "Now")
                 {
                     sw.Restart();
                     var res = client.Query(new DateTimeCommand("Now"));
@@ -73,7 +71,7 @@ namespace net472_DEMO
                     Console.WriteLine();
                 }
             }
-            
+
             client.Dispose();
             server.Dispose();
         }
@@ -113,7 +111,7 @@ namespace net472_DEMO
         {
             return JsonConvert.SerializeObject(data);
         }
-        public double[] Array (int len)
+        public double[] Array(int len)
         {
             return new double[len];
         }

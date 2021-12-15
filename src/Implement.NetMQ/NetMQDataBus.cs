@@ -2,9 +2,7 @@
 using MACOs.JY.ActorFramework.Core.DataBus;
 using MACOs.JY.ActorFramework.Core.Utilities;
 using NetMQ;
-using NetMQ.Monitoring;
 using NetMQ.Sockets;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Net;
 using System.Runtime.Serialization;
@@ -47,9 +45,9 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         {
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
             _config = config;
-            _logger= NLog.LogManager.GetLogger($"{this.GetType().Name}_{_config.AliasName}");
+            _logger = _config.EnableLogging ? NLog.LogManager.GetLogger($"{this.GetType().Name}_{_config.AliasName}") : NLog.LogManager.CreateNullLogger();
             _logger.Info("Object is created");
-            
+
         }
 
         #region Public Methods
@@ -173,7 +171,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             {
                 _logger.Trace("Start configuring beacon");
 
-                _beacon = new NetMQBeacon();                
+                _beacon = new NetMQBeacon();
                 bool emptyIP = string.IsNullOrEmpty(_config.BeaconIP);
                 if (_config.BeaconIP == "127.0.0.1")
                 {
@@ -201,13 +199,24 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 //configure beacon
                 if (emptyIP)
                 {
-                    _beacon.ConfigureAllInterfaces(_config.BeaconPort);                    
+                    _beacon.ConfigureAllInterfaces(_config.BeaconPort);
                 }
                 else
                 {
-                    _beacon.Configure(_config.BeaconPort,_config.BeaconIP);
+                    _beacon.Configure(_config.BeaconPort, _config.BeaconIP);
+
+                    /* Unmerged change from project 'Implement.NetMQ (net6.0)'
+                    Before:
+                                    }
+
+                                    _logger.Info("Beacon configuration is done");
+                    After:
+                                    }
+
+                                    _logger.Info("Beacon configuration is done");
+                    */
                 }
-                
+
                 _logger.Info("Beacon configuration is done");
             }
             catch (Exception ex)
@@ -227,8 +236,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 _logger.Debug($"Beacon start listening at port {_config.BeaconPort}");
                 while (!cts_beaconListening.IsCancellationRequested)
                 {
-                    BeaconMessage msg ;
-                    if (_beacon.TryReceive(Timeout,out msg))
+                    BeaconMessage msg;
+                    if (_beacon.TryReceive(Timeout, out msg))
                     {
                         if (!msg.String.Contains("DUMMY"))
                         {
@@ -240,13 +249,13 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                             _serverSocket.Connect(info);
                             _logger.Debug($"Client is connected {info}");
                         }
-                        
-                        
+
+
                     }
                 }
             });
 
-            Task.Run(() => 
+            Task.Run(() =>
             {
                 //20211214 NetMQBeacon will throw socket exception(1040) if no other beacon is existed after object is created and configured
                 //Use dummy beacon to "activate" the instance
@@ -315,7 +324,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     }
                 }
             });
-            
+
         }
         private void LogError(Exception ex)
         {
@@ -328,7 +337,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         private void CurrentDomain_DomainUnload(object sender, EventArgs e)
         {
             _logger.Trace("Domain Unload");
-            Dispose();            
+            Dispose();
             //this will close all netmq sockets in the background
             NetMQConfig.Cleanup(false);
         }

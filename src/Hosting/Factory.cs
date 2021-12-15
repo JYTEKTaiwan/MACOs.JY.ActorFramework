@@ -1,8 +1,8 @@
-﻿using MACOs.JY.ActorFramework.Core.DataBus;
+﻿using MACOs.JY.ActorFramework.Clients;
+using MACOs.JY.ActorFramework.Core.DataBus;
 using MACOs.JY.ActorFramework.Core.Devices;
-using MACOs.JY.ActorFramework.Clients;
-using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using System.Reflection;
 
 namespace MACOs.JY.ActorFramework.Hosting
 {

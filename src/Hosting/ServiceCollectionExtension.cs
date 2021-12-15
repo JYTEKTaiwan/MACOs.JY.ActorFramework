@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using MACOs.JY.ActorFramework.Clients;
 using MACOs.JY.ActorFramework.Core.Devices;
-using MACOs.JY.ActorFramework.Clients;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MACOs.JY.ActorFramework.Hosting
 {
@@ -11,7 +11,7 @@ namespace MACOs.JY.ActorFramework.Hosting
         {
             if (typeof(IDevice).IsAssignableFrom(typeof(T)))
             {
-                series.AddScoped<IDevice>(x =>DeviceFactory.Create<T>(section));
+                series.AddScoped<IDevice>(x => DeviceFactory.Create<T>(section));
             }
             return series;
         }
@@ -19,9 +19,27 @@ namespace MACOs.JY.ActorFramework.Hosting
         {
             if (typeof(IClient).IsAssignableFrom(typeof(T)))
             {
-                series.AddScoped<IClient>(x => ClientFactory.Create<T>(ctxt) );
+                series.AddScoped<IClient>(x => ClientFactory.Create<T>(ctxt));
             }
             return series;
+        }
+        public static ClientCollection ToClientCollection(this IEnumerable<IClient> clients)
+        {
+            return new ClientCollection(clients);
+        }
+    }
+
+    public class ClientCollection : List<IClient>
+    {
+        public ClientCollection(IEnumerable<IClient> collection) : base(collection)
+        {
+        }
+        new public IClient this[string name]
+        {
+            get
+            {
+                return (IClient)this.First(x => x.TargetName == name);
+            }
         }
     }
 }

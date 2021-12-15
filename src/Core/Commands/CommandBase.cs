@@ -1,9 +1,6 @@
 ﻿using MACOs.JY.ActorFramework.Core.Devices;
-using Newtonsoft.Json;
 using System;
-using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace MACOs.JY.ActorFramework.Core.Commands
 {
@@ -19,7 +16,6 @@ namespace MACOs.JY.ActorFramework.Core.Commands
     }
     public abstract class CommandBase : ICommand
     {
-        public IDevice Instance { get; set; }
         public string MethodName { get; set; }
         public string ParameterQualifiedName { get; }
         public CommandBase(string name)
@@ -30,20 +26,19 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         protected CommandBase()
         {
-        }       
+        }
 
-        public abstract object Execute();
+        public abstract object Execute(IDevice instance);
 
         public abstract string GetSimplifiedString();
         public string DefaultConvertString(object obj)
         {
             return obj != null ? obj.ToString() : "";
         }
-        public virtual string ConvertToString(object obj)
+        public virtual string ResultConvert(object obj)
         {
             return obj != null ? obj.ToString() : "";
         }
-
         public static CommandBase Create(string methodName)
         {
             return new Command(methodName);
@@ -96,21 +91,21 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         {
         }
 
-        public override string ConvertToString(object obj)
+        public override string ResultConvert(object obj)
         {
             return base.DefaultConvertString(obj);
         }
 
-        public override object Execute()
+        public override object Execute(IDevice instance)
         {
-            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags);
+            var mi = instance.GetType().GetMethod(MethodName, CommandContext.flags);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: {MethodName}");
             }
             else
             {
-                var response = mi.Invoke(Instance, null);
+                var response = mi.Invoke(instance, null);
                 return response;
             }
         }
@@ -133,19 +128,19 @@ namespace MACOs.JY.ActorFramework.Core.Commands
         public Command(string name, T1 param1) : base(name)
         {
             Parameter = new Tuple<T1>(param1);
-            
+
         }
-        public override object Execute()
+        public override object Execute(IDevice instance)
         {
             var ParameterTypes = this.GetParameterTypes();
-            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
+            var mi = instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: {MethodName}({ParameterTypes[0].Name})");
             }
             else
             {
-                return mi.Invoke(Instance, new object[] { Parameter.Item1 });
+                return mi.Invoke(instance, new object[] { Parameter.Item1 });
             }
         }
         public CommandBase Generate(T1 param1)
@@ -153,7 +148,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             var obj = new Command<T1>(this.MethodName, param1);
             return obj;
         }
-        public override string ConvertToString(object obj)
+        public override string ResultConvert(object obj)
         {
             return base.DefaultConvertString(obj);
         }
@@ -173,18 +168,18 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         }
 
-        public override object Execute()
+        public override object Execute(IDevice instance)
         {
             var ParameterTypes = this.GetParameterTypes();
 
-            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
+            var mi = instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: {MethodName}({ParameterTypes[0].Name},{ParameterTypes[1].Name})");
             }
             else
             {
-                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2 });
+                return mi.Invoke(instance, new object[] { Parameter.Item1, Parameter.Item2 });
 
             }
 
@@ -194,7 +189,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             var obj = new Command<T1, T2>(this.MethodName, param1, param2);
             return obj;
         }
-        public override string ConvertToString(object obj)
+        public override string ResultConvert(object obj)
         {
             return base.DefaultConvertString(obj);
         }
@@ -207,7 +202,6 @@ namespace MACOs.JY.ActorFramework.Core.Commands
     }
     public class Command<T1, T2, T3> : CommandBase
     {
-
         public Tuple<T1, T2, T3> Parameter { get; set; }
         public Command(string name, T1 param1, T2 param2, T3 param3) : base(name)
         {
@@ -215,11 +209,11 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         }
 
-        public override object Execute()
+        public override object Execute(IDevice instance)
         {
             var ParameterTypes = this.GetParameterTypes();
 
-            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
+            var mi = instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
@@ -230,7 +224,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             }
             else
             {
-                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3 });
+                return mi.Invoke(instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3 });
             }
 
         }
@@ -239,7 +233,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             var obj = new Command<T1, T2, T3>(this.MethodName, param1, param2, param3);
             return obj;
         }
-        public override string ConvertToString(object obj)
+        public override string ResultConvert(object obj)
         {
             return base.DefaultConvertString(obj);
         }
@@ -259,11 +253,11 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         }
 
-        public override object Execute()
+        public override object Execute(IDevice instance)
         {
             var ParameterTypes = this.GetParameterTypes();
 
-            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
+            var mi = instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
@@ -276,7 +270,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             }
             else
             {
-                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4 });
+                return mi.Invoke(instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4 });
             }
 
         }
@@ -285,7 +279,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             var obj = new Command<T1, T2, T3, T4>(this.MethodName, param1, param2, param3, param4);
             return obj;
         }
-        public override string ConvertToString(object obj)
+        public override string ResultConvert(object obj)
         {
             return base.DefaultConvertString(obj);
         }
@@ -306,11 +300,11 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         }
 
-        public override object Execute()
+        public override object Execute(IDevice instance)
         {
             var ParameterTypes = this.GetParameterTypes();
 
-            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
+            var mi = instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
@@ -324,7 +318,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
             else
             {
-                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5 });
+                return mi.Invoke(instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5 });
             }
 
         }
@@ -333,7 +327,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             var obj = new Command<T1, T2, T3, T4, T5>(this.MethodName, param1, param2, param3, param4, param5);
             return obj;
         }
-        public override string ConvertToString(object obj)
+        public override string ResultConvert(object obj)
         {
             return base.DefaultConvertString(obj);
         }
@@ -354,11 +348,11 @@ namespace MACOs.JY.ActorFramework.Core.Commands
 
         }
 
-        public override object Execute()
+        public override object Execute(IDevice instance)
         {
             var ParameterTypes = this.GetParameterTypes();
 
-            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
+            var mi = instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
@@ -372,7 +366,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             }
             else
             {
-                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6 });
+                return mi.Invoke(instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6 });
             }
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6)
@@ -380,7 +374,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             var obj = new Command<T1, T2, T3, T4, T5, T6>(this.MethodName, param1, param2, param3, param4, param5, param6);
             return obj;
         }
-        public override string ConvertToString(object obj)
+        public override string ResultConvert(object obj)
         {
             return base.DefaultConvertString(obj);
         }
@@ -399,11 +393,11 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             Parameter = new Tuple<T1, T2, T3, T4, T5, T6, T7>(param1, param2, param3, param4, param5, param6, param7);
         }
 
-        public override object Execute()
+        public override object Execute(IDevice instance)
         {
             var ParameterTypes = this.GetParameterTypes();
 
-            var mi = Instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
+            var mi = instance.GetType().GetMethod(MethodName, CommandContext.flags, null, ParameterTypes, null);
             if (mi == null)
             {
                 throw new CommandNotFoundException($"Method not found: " +
@@ -418,7 +412,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             }
             else
             {
-                return mi.Invoke(Instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6, Parameter.Item7 });
+                return mi.Invoke(instance, new object[] { Parameter.Item1, Parameter.Item2, Parameter.Item3, Parameter.Item4, Parameter.Item5, Parameter.Item6, Parameter.Item7 });
             }
         }
         public CommandBase Generate(T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, T6 param6, T7 param7)
@@ -426,7 +420,7 @@ namespace MACOs.JY.ActorFramework.Core.Commands
             var obj = new Command<T1, T2, T3, T4, T5, T6, T7>(this.MethodName, param1, param2, param3, param4, param5, param6, param7);
             return obj;
         }
-        public override string ConvertToString(object obj)
+        public override string ResultConvert(object obj)
         {
             return base.DefaultConvertString(obj);
         }

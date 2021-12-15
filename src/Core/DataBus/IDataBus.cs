@@ -3,7 +3,7 @@ using System;
 
 namespace MACOs.JY.ActorFramework.Core.DataBus
 {
-    public interface IDataBus:IDisposable
+    public interface IDataBus : IDisposable
     {
         string Name { get; set; }
         /// <summary>

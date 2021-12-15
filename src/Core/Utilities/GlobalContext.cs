@@ -1,5 +1,4 @@
 ﻿using MACOs.JY.ActorFramework.Core.Devices;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace MACOs.JY.ActorFramework.Core.Utilities

@@ -5,8 +5,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
 using System;
-using System.Reflection;
-using System.Linq;
 #if NET6_0_OR_GREATER
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -25,7 +23,6 @@ namespace MACOs.JY.ActorFramework.Core.Devices
     /// </summary>
     public abstract class DeviceBase : IDevice
     {
-        private readonly IDataBusContext _busContext;
         private readonly Logger _logger;
 
         private IDataBus _bus;
@@ -33,16 +30,18 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         private bool isDisposed = false;
         public string Name { get; set; }
         public string BusAlias { get; set; }
+
+        public bool EnableLogging { get; set; } = true;
         public string ConnectionInfo { get; set; }
         /// <summary>
         /// public event after the command is executed
         /// </summary>
         public event ExecuteCompleteEvent OnExecutionComplete;
 
-public DeviceBase()
+        public DeviceBase()
         {
             Name = this.GetType().Name;
-            _logger=NLog.LogManager.GetLogger(this.GetType().FullName);
+            _logger = EnableLogging ? NLog.LogManager.GetLogger($"{this.GetType().FullName}") : LogManager.CreateNullLogger();
             _logger.Trace("Begin creaeting DeviceBase object");
             _logger.Info("Object is created");
         }
@@ -60,8 +59,8 @@ public DeviceBase()
                 var cmd = ConvertToCommand(args);
 
                 _logger.Trace("Start executing the command and converting the response into string");
-                var result = cmd.Execute();
-                var ans = cmd.ConvertToString(result);
+                var result = cmd.Execute(this);
+                var ans = cmd.ResultConvert(result);
                 _logger.Debug($"Command is executed with result: {ans}");
                 _logger.Info($"Command is received and executed ");
 
@@ -99,7 +98,6 @@ public DeviceBase()
                 JToken token = JToken.Parse(str);
                 Type t = Type.GetType(token["ParameterQualifiedName"].ToString());
                 var cmd = JsonConvert.DeserializeObject(str, t) as ICommand;
-                cmd.Instance = this;
                 cmd.MethodName = token["MethodName"].ToString();
                 _logger.Debug((cmd as CommandBase).GetSimplifiedString());
                 _logger.Info($"Command is converted successfully");

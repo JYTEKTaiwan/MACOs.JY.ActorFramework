@@ -1,12 +1,10 @@
 ﻿using MACOs.JY.ActorFramework.Clients;
 using NetMQ;
-using NetMQ.Sockets;
 using System;
 using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
@@ -20,7 +18,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
     /// Context that is used to automatically create NetMQClient object
     /// </summary>
     [Serializable]
-    public class NetMQClientContext : IClientContext,IDisposable
+    public class NetMQClientContext : IClientContext, IDisposable
     {
         private NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
         private NetMQBeacon _beacon;
@@ -42,6 +40,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// Socket type for NetMQ DealerSocket. Default is tcp
         /// </summary>
         public SocketType Type { get; set; } = SocketType.tcp;
+        public bool EnableLogging { get; set; } = false;
 
         /// <summary>
         /// DealerSocket will be listening at this port. Random assigned if value is -1. Default value is -1
@@ -50,9 +49,9 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// <summary>
         /// DealerSocket will be listening on thie ip address. Defult value is first IPV.4 ip address
         /// </summary>
-        public string ListeningIP { get; set; }= Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
+        public string ListeningIP { get; set; } = Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToString();
         public int Timeout { get; set; } = 5000;
-        public NetMQClientContext(string targetAlias, int beaconPort=9999, string beaconIp="" )
+        public NetMQClientContext(string targetAlias, int beaconPort = 9999, string beaconIp = "")
         {
             _logger.Trace("Start creating object");
             BeaconPort = beaconPort;
@@ -72,7 +71,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 {
                     throw new NetMQClientException("Target alias cannot be empty");
                 }
-                client = new NetMQClient() { TargetName = TargetAlias };
+                client = new NetMQClient(this.EnableLogging) { TargetName = TargetAlias };
                 BeaconConfigure();
                 client.Bind(Type + "://" + ListeningIP, ListeningPort);
                 var cts = new CancellationTokenSource();
@@ -84,7 +83,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     _beacon.Silence();
                 };
 
-                _beacon.Publish($"{TargetAlias}>{client.EndPoint}", TimeSpan.FromSeconds(1));                               
+                _beacon.Publish($"{TargetAlias}>{client.EndPoint}", TimeSpan.FromSeconds(1));
                 res = client.StartListening(Timeout);
                 client.SocketAccept = null;
                 _beacon.Dispose();
@@ -110,6 +109,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
             catch (Exception ex)
             {
+                var ttt = ex.GetType();
                 LogError(ex);
                 _beacon.Silence();
                 _beacon?.Dispose();
@@ -160,7 +160,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                     try
                     {
                         //Check if IP string is convertable
-                         ip = IPAddress.Parse(BeaconIP);
+                        ip = IPAddress.Parse(BeaconIP);
                         _beacon.Configure(BeaconPort, ip.ToString());
                     }
                     catch (Exception ex)

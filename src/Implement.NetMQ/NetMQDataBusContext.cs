@@ -19,7 +19,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         /// Beacon will be subscribed from thie ip address (ex xxx.xxx.xxx.xxx). Use empty string if "127.0.0.1" is need. Default is empty string
         /// </summary>
         [JsonProperty]
-        public string BeaconIP { get; set; } ="";
+        public string BeaconIP { get; set; } = "";
         /// <summary>
         /// The unique alias name that Beacon will be subscribed, auto assigned random number if keep empty
         /// </summary>
@@ -27,6 +27,8 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         public string AliasName { get; set; }
 
         public SocketType Type { get; set; } = SocketType.tcp;
+
+        public bool EnableLogging { get; set; } = false;
         public IDataBus NewInstance()
         {
             var bus = new NetMQDataBus(this);

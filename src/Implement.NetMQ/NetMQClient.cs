@@ -1,21 +1,17 @@
 ﻿using MACOs.JY.ActorFramework.Clients;
 using MACOs.JY.ActorFramework.Core.Commands;
 using NetMQ;
-using NetMQ.Monitoring;
 using NetMQ.Sockets;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using NLog;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
 
 namespace MACOs.JY.ActorFramework.Implement.NetMQ
 {
     public class NetMQClient : IClient, IDisposable
     {
-        private Logger _logger = LogManager.GetCurrentClassLogger();
+        private Logger _logger;
         private NetMQSocket _socket;
         private bool isDisposed = false;
         public delegate void SocketAccepted();
@@ -24,10 +20,11 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
         public string EndPoint { get; set; } = "";
         public TimeSpan Timeout { get; set; } = TimeSpan.FromMilliseconds(5000);
         public string TargetName { get; set; }
-        public NetMQClient()
+        public NetMQClient(bool enableLogging = true)
         {
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
             _socket = new DealerSocket();
+            _logger = enableLogging ? LogManager.GetCurrentClassLogger() : LogManager.CreateNullLogger();
             _logger.Info($"Client {this.GetHashCode()} is created");
         }
 
@@ -82,7 +79,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
         }
 
-        public bool StartListening(int timeoutMilliSecond)
+        public bool StartListening(int timeoutMilliSecond = 5000)
         {
             try
             {
@@ -130,7 +127,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 throw ex;
             }
         }
-        public string Receive(int timeoutMilliSecond=-1)
+        public string Receive(int timeoutMilliSecond = -1)
         {
             try
             {
@@ -139,7 +136,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 lock (this)
                 {
                     List<string> msg = new List<string>();
-                    if (timeoutMilliSecond>0)
+                    if (timeoutMilliSecond > 0)
                     {
                         var pass = _socket.TryReceiveMultipartStrings(TimeSpan.FromMilliseconds(timeoutMilliSecond), ref msg, 4);
                         if (pass)
@@ -179,56 +176,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
                 throw ex;
             }
         }
-
-        public void Dispose()
-        {
-            try
-            {
-                Dispose(true);
-                GC.SuppressFinalize(this);
-            }
-            catch (Exception ex)
-            {
-                LogError(ex);
-                throw ex;
-            }
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-            if (disposing)
-
-            {
-                _logger.Trace("Start disposing client object");
-
-                if (_socket != null && !_socket.IsDisposed)
-                {
-                    try
-                    {
-                        UnBind();
-                    }
-                    catch (Exception) { }
-
-
-                    //_socket?.Close();
-                    _socket?.Dispose();
-                    _socket = null;
-                    _logger.Debug("Dispose the socket");
-
-                }
-
-                isDisposed = true;
-
-
-                _logger.Info("client object disposed");
-
-            }
-        }
-        public void Send(ICommand cmd,int timeoutMilliSecond = -1)
+        public void Send(ICommand cmd, int timeoutMilliSecond = -1)
         {
             try
             {
@@ -264,8 +212,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
 
         }
-
-        public string Query(ICommand cmd,int timeoutMilliSecond=-1)
+        public string Query(ICommand cmd, int timeoutMilliSecond = -1)
         {
             try
             {
@@ -273,7 +220,7 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
 
                 lock (this)
                 {
-                    Send(cmd,timeoutMilliSecond);
+                    Send(cmd, timeoutMilliSecond);
                     //return string begins
                     var res = Receive(timeoutMilliSecond);
                     if (res.Contains("[Error]:"))
@@ -296,7 +243,54 @@ namespace MACOs.JY.ActorFramework.Implement.NetMQ
             }
 
         }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+            if (disposing)
 
+            {
+                _logger.Trace("Start disposing client object");
+
+                if (_socket != null && !_socket.IsDisposed)
+                {
+                    try
+                    {
+                        UnBind();
+                    }
+                    catch (Exception) { }
+
+
+                    //_socket?.Close();
+                    _socket?.Dispose();
+                    _socket = null;
+                    _logger.Debug("Dispose the socket");
+
+                }
+
+                isDisposed = true;
+
+
+                _logger.Info("client object disposed");
+
+            }
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+                throw ex;
+            }
+        }
 
         ~NetMQClient()
         {

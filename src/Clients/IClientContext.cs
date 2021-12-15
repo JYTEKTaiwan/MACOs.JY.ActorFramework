@@ -1,5 +1,6 @@
 ﻿namespace MACOs.JY.ActorFramework.Clients
-{     public interface IClientContext
+{
+    public interface IClientContext
     {
         IClient Search();
 

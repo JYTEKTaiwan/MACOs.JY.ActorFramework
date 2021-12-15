@@ -5,7 +5,7 @@ using System;
 
 namespace MACOs.JY.ActorFramework.Core.Devices
 {
-    public interface IDevice:IDisposable
+    public interface IDevice : IDisposable
     {
         string BusAlias { get; set; }
         /// <summary>
