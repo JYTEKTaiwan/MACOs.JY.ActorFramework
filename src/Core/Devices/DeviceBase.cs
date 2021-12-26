@@ -5,15 +5,14 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NLog;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 #if NET6_0_OR_GREATER
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
-
 #endif
 
-#if NET6_0_OR_GREATER
-
-#endif
 
 namespace MACOs.JY.ActorFramework.Core.Devices
 {
@@ -23,6 +22,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
     /// </summary>
     public abstract class DeviceBase : IDevice
     {
+        private readonly Dictionary<string, Type> _methodsLookUp;
         private readonly Logger _logger;
 
         private IDataBus _bus;
@@ -44,8 +44,51 @@ namespace MACOs.JY.ActorFramework.Core.Devices
             _logger = EnableLogging ? NLog.LogManager.GetLogger($"{this.GetType().FullName}") : LogManager.CreateNullLogger();
             _logger.Trace("Begin creaeting DeviceBase object");
             _logger.Info("Object is created");
+            _methodsLookUp = ParsingMethodInfos();
         }
+        private Dictionary<string, Type> ParsingMethodInfos()
+        {
+            var dict = new Dictionary<string, Type>();
+            var flags = BindingFlags.Public | BindingFlags.Instance;
+            MethodInfo[] methods;
+            if (this.GetType().GetMethods().Where(x=>x.GetCustomAttributes<CommandAttribute>(false).Count()>0).Count()>0)
+            {
+                //CommandInfoAttribute is used, only takes methods with CommandInfoAttribute exists
+                methods = this.GetType().GetMethods().Where(x =>
+                {
+                    return x.GetCustomAttributes<CommandAttribute>(false).Count() > 0;
+                }).ToArray();
+            }
+            else
+            {
+                //no CommandInfoAttribute is found, search the derived class methods instead
+                methods = this.GetType().GetMethods().Where(x =>
+                {
+                    return !x.IsVirtual && !x.IsSpecialName;
+                }).ToArray();
+            }
 
+            var cmdBase = typeof(CommandBase).GetMethods().Where(m => m.Name == "Create").ToArray();
+
+            foreach (var item in methods)
+            {
+                var param = item.GetParameters();
+                MethodInfo method;
+                if (param.Length != 0)
+                {
+                    //if parameter count >0
+                    method = cmdBase[param.Length].MakeGenericMethod(param.Select(x => x.ParameterType).ToArray());
+                }
+                else
+                {
+                    //if parameter count =0(non-generic method)
+                    method = cmdBase[0];
+
+                }
+                dict.Add(item.Name, method.ReturnType);
+            }
+            return dict;
+        }
         /// <summary>
         /// New data event from databus
         /// </summary>
@@ -60,7 +103,7 @@ namespace MACOs.JY.ActorFramework.Core.Devices
 
                 _logger.Trace("Start executing the command and converting the response into string");
                 var result = cmd.Execute(this);
-                var ans = cmd.ResultConvert(result);
+                var ans = cmd.ConvertResultToString(result);
                 _logger.Debug($"Command is executed with result: {ans}");
                 _logger.Info($"Command is received and executed ");
 
@@ -90,18 +133,24 @@ namespace MACOs.JY.ActorFramework.Core.Devices
         }
         public virtual ICommand ConvertToCommand(object msg)
         {
+            ICommand cmd;
+            string methodName = "";
             try
             {
                 _logger.Trace("Start converting to ICommand");
                 var str = msg.ToString();
 
-                JToken token = JToken.Parse(str);
-                Type t = Type.GetType(token["ParameterQualifiedName"].ToString());
-                var cmd = JsonConvert.DeserializeObject(str, t) as ICommand;
-                cmd.MethodName = token["MethodName"].ToString();
+                methodName = JToken.Parse(str)["MethodName"].ToString();
+                cmd = JsonConvert.DeserializeObject(str, _methodsLookUp[methodName]) as ICommand;
                 _logger.Debug((cmd as CommandBase).GetSimplifiedString());
                 _logger.Info($"Command is converted successfully");
                 return cmd;
+            }
+            catch  (KeyNotFoundException ex)
+            {
+                var err= new CommandNotFoundException($"Command '{methodName}' not found", ex);
+                LogError(err);
+                throw err;
             }
             catch (Exception ex)
             {

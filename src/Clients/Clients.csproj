@@ -15,7 +15,7 @@
     <PackageTags>C#, Actor Framework</PackageTags>
     <PackageReleaseNotes>Client class</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/JYTEKTaiwan/MACOs.JY.ActorFramework/tree/master/src/Clients</RepositoryUrl>
-    <Version>1.1.8</Version>
+    <Version>1.1.9</Version>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
     <BaseOutputPath>bin\</BaseOutputPath>
     <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>

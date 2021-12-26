@@ -6,6 +6,6 @@ namespace MACOs.JY.ActorFramework.Core.Commands
     {
         string MethodName { get; set; }
         object Execute(IDevice instance);
-        string ResultConvert(object obj);
+        string ConvertResultToString(object obj);
     }
 }

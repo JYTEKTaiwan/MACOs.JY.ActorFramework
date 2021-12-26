@@ -19,9 +19,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "icon", "icon", "{EC2381FC-A
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documents", "documents", "{CA67D9AA-8628-45CA-893B-6D34AD10FE39}"
-	ProjectSection(SolutionItems) = preProject
-		documents\README.md = documents\README.md
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "net472_DEMO", "examples\net472_DEMO\net472_DEMO.csproj", "{ED385EE2-F23D-4C20-9373-94DB5FDFFCA6}"
 EndProject
@@ -42,7 +39,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hosting", "src\Hosting\Host
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "net60_DEMO", "examples\net60_DEMO\net60_DEMO.csproj", "{E17F3959-7F3E-4176-B579-AC7440AAC24E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest_net6", "Test\UnitTest_net6\UnitTest_net6.csproj", "{FB16F4D6-7DE7-469A-B138-27365569570D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTest_net6", "Test\UnitTest_net6\UnitTest_net6.csproj", "{FB16F4D6-7DE7-469A-B138-27365569570D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -108,7 +105,7 @@ Global
 		{E17F3959-7F3E-4176-B579-AC7440AAC24E} = {F81F1D1B-5363-4616-831C-746E1BF19A15}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		BuildVersion_StartDate = 2000/1/1
 		SolutionGuid = {32B03236-DABD-45EA-84ED-C27B760D41A3}
+		BuildVersion_StartDate = 2000/1/1
 	EndGlobalSection
 EndGlobal
