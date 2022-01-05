@@ -3,9 +3,9 @@ import numpy as np
 import time as sw
 import sys
 
-sys.path.append(r"C:\Users\Way\source\repos\MACOs.JY.ActorFramework\src\Implement.NetMQ\bin\Release\net472")
-sys.path.append(r"C:\Users\Way\source\repos\MACOs.JY.ActorFramework\src\Core\bin\Release\net472")
-sys.path.append(r"C:\Users\Way\source\repos\MACOs.JY.ActorFramework\examples\net472_DEMO\bin\Release")
+sys.path.append(r"E:\repos\MACOs.JY.ActorFramework\src\Implement.NetMQ\bin\Release\net472")
+sys.path.append(r"E:\repos\MACOs.JY.ActorFramework\src\Core\bin\Release\net472")
+sys.path.append(r"E:\repos\MACOs.JY.ActorFramework\examples\net472_DEMO\bin\Release")
 clr.AddReference("net472_DEMO")
 clr.AddReference("MACOs.JY.ActorFramework.Implement.NetMQ")
 clr.AddReference("MACOs.JY.ActorFramework.Core")
